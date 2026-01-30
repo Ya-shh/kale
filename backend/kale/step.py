@@ -40,7 +40,7 @@ class StepConfig(Config):
     limits = Field(
         type=dict, default=dict(), validators=[validators.K8sLimitsValidator]
     )
-    docker_image = Field(type=str, default="")
+    base_image = Field(type=str, default="")
     retry_count = Field(type=int, default=0)
     retry_interval = Field(type=str)
     retry_factor = Field(type=int)

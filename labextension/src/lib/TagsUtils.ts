@@ -6,11 +6,13 @@ import CellUtils from './CellUtils';
 import { RESERVED_CELL_NAMES } from '../widgets/cell-metadata/CellMetadataEditor';
 import { ICellModel, CodeCellModel } from '@jupyterlab/cells';
 
+const IMAGE_TAG = 'image:';
+
 interface IKaleCellTags {
   blockName: string;
   prevBlockNames: string[];
   limits?: { [id: string]: string };
-  dockerImage?: string;
+  baseImage?: string;
 }
 
 /** Contains utility functions for manipulating/handling Kale cell tags. */
@@ -99,10 +101,10 @@ export default class TagsUtils {
 
       // Parse docker image tag
       let dockerImage: string | undefined;
-      const imageTag = tags.find(v => v.startsWith('image:'));
+      const imageTag = tags.find(v => v.startsWith(IMAGE_TAG));
       if (imageTag) {
         // Remove 'image:' prefix to get the full image string
-        dockerImage = imageTag.substring('image:'.length);
+        dockerImage = imageTag.substring(IMAGE_TAG.length);
       }
 
       return {
@@ -145,7 +147,7 @@ export default class TagsUtils {
 
     // Add docker image tag if specified
     if (dockerImage) {
-      tags.push('image:' + dockerImage);
+      tags.push(IMAGE_TAG + dockerImage);
     }
 
     return CellUtils.setCellMetaData(notebookPanel, index, 'tags', tags, save);

@@ -16,7 +16,7 @@ interface IProps {
   previousBlockName?: string;
   stepDependencies: string[];
   limits: { [id: string]: string };
-  dockerImage?: string;
+  baseImage?: string;
   cellElement: any;
   cellIndex: number;
 }
@@ -222,9 +222,9 @@ export class InlineMetadata extends React.Component<IProps, IState> {
   }
 
   createDockerImageText() {
-    return this.props.dockerImage ? (
+    return this.props.baseImage ? (
       <p style={{ fontStyle: 'italic', marginLeft: '10px' }}>
-        image: {this.props.dockerImage}
+        image: {this.props.baseImage}
       </p>
     ) : (
       ''

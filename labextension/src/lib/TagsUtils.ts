@@ -99,19 +99,19 @@ export default class TagsUtils {
           limits[values[1]] = values[2];
         });
 
-      // Parse docker image tag
-      let dockerImage: string | undefined;
+      // Parse base image tag
+      let baseImage: string | undefined;
       const imageTag = tags.find(v => v.startsWith(IMAGE_TAG));
       if (imageTag) {
         // Remove 'image:' prefix to get the full image string
-        dockerImage = imageTag.substring(IMAGE_TAG.length);
+        baseImage = imageTag.substring(IMAGE_TAG.length);
       }
 
       return {
         blockName: b_name[0] || '',
         prevBlockNames: prevs,
         limits: limits,
-        dockerImage: dockerImage,
+        baseImage: baseImage,
       };
     }
     return null;
@@ -138,16 +138,16 @@ export default class TagsUtils {
     }
     const stepDependencies = metadata.prevBlockNames || [];
     const limits = metadata.limits || {};
-    const dockerImage = metadata.dockerImage;
+    const baseImage = metadata.baseImage;
     const tags = [nb]
       .concat(stepDependencies.map(v => 'prev:' + v))
       .concat(
         Object.keys(limits).map(lim => 'limit:' + lim + ':' + limits[lim]),
       );
 
-    // Add docker image tag if specified
-    if (dockerImage) {
-      tags.push(IMAGE_TAG + dockerImage);
+    // Add base image tag if specified
+    if (baseImage) {
+      tags.push(IMAGE_TAG + baseImage);
     }
 
     return CellUtils.setCellMetaData(notebookPanel, index, 'tags', tags, save);

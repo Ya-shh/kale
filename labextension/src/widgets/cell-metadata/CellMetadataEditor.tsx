@@ -62,7 +62,7 @@ export interface IProps {
   // Resource limits, like gpu limits
   limits?: { [id: string]: string };
   // Docker image for this step
-  dockerImage?: string;
+  baseImage?: string;
 }
 
 // this stores the name of a block and its color (form the name hash)
@@ -255,7 +255,7 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
     const currentCellMetadata = {
       prevBlockNames: this.props.stepDependencies,
       limits: this.props.limits || {},
-      dockerImage: this.props.dockerImage,
+      baseImage: this.props.baseImage,
       blockName: value
     };
 
@@ -276,7 +276,7 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
     const currentCellMetadata = {
       blockName: this.props.stepName || '',
       limits: this.props.limits || {},
-      dockerImage: this.props.dockerImage,
+      baseImage: this.props.baseImage,
       prevBlockNames: previousBlocks
     };
 
@@ -315,7 +315,7 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
       blockName: this.props.stepName || '',
       prevBlockNames: this.props.stepDependencies,
       limits: limits,
-      dockerImage: this.props.dockerImage
+      baseImage: this.props.baseImage
     };
 
     TagsUtils.setKaleCellTags(
@@ -367,7 +367,7 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
       blockName: this.props.stepName || '',
       prevBlockNames: this.props.stepDependencies,
       limits: this.props.limits || {},
-      dockerImage: value || undefined
+      baseImage: value || undefined
     };
 
     TagsUtils.setKaleCellTags(
@@ -471,7 +471,7 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
                 <Input
                   label={'Docker Image'}
                   updateValue={this.updateDockerImage}
-                  value={this.props.dockerImage || ''}
+                  value={this.props.baseImage || ''}
                   placeholder="e.g., python:3.11"
                   variant="outlined"
                   style={{ width: '25%' }}

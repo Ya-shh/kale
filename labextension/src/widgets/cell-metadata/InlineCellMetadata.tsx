@@ -243,7 +243,7 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
         stepName: tags.blockName || '',
         stepDependencies: tags.prevBlockNames || [],
         limits: tags.limits || {},
-        dockerImage: tags.dockerImage
+        baseImage: tags.baseImage
       };
 
       const cellElement = this.props.notebook.content.widgets[index]
@@ -266,7 +266,7 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
           blockName={tags.blockName}
           stepDependencies={tags.prevBlockNames}
           limits={tags.limits || {}}
-          dockerImage={tags.dockerImage}
+          baseImage={tags.baseImage}
           previousBlockName={previousBlockName}
           cellIndex={index}
         />,
@@ -303,14 +303,14 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
           stepName: activeEditorData.stepName || '',
           stepDependencies: activeEditorData.stepDependencies || [],
           limits: activeEditorData.limits || {},
-          dockerImage: activeEditorData.dockerImage
+          baseImage: activeEditorData.baseImage
         }
       : {
           notebook: this.props.notebook,
           stepName: '',
           stepDependencies: [],
           limits: {},
-          dockerImage: undefined
+          baseImage: undefined
         };
 
     const cellMetadataEditor = createPortal(
@@ -319,7 +319,7 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
         stepName={editorProps.stepName}
         stepDependencies={editorProps.stepDependencies}
         limits={editorProps.limits}
-        dockerImage={editorProps.dockerImage}
+        baseImage={editorProps.baseImage}
       />,
       document.body
     );

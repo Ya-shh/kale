@@ -61,7 +61,7 @@ export interface IProps {
   stepDependencies: string[];
   // Resource limits, like gpu limits
   limits?: { [id: string]: string };
-  // Docker image for this step
+  // Base image for this step
   baseImage?: string;
 }
 
@@ -362,7 +362,7 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
     });
   }
 
-  updateDockerImage = (value: string) => {
+  updateBaseImage = (value: string) => {
     const currentCellMetadata = {
       blockName: this.props.stepName || '',
       prevBlockNames: this.props.stepDependencies,
@@ -448,6 +448,19 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
               )}
 
               {cellType === 'step' ? (
+                <Input
+                  label={'Base Image'}
+                  updateValue={this.updateBaseImage}
+                  value={this.props.baseImage || ''}
+                  placeholder="e.g., python:3.11"
+                  variant="outlined"
+                  style={{ width: '25%' }}
+                />
+              ) : (
+                ''
+              )}
+
+              {cellType === 'step' ? (
                 <div style={{ padding: 0 }}>
                   <Button
                     disabled={
@@ -463,19 +476,6 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
                     GPU
                   </Button>
                 </div>
-              ) : (
-                ''
-              )}
-
-              {cellType === 'step' ? (
-                <Input
-                  label={'Docker Image'}
-                  updateValue={this.updateDockerImage}
-                  value={this.props.baseImage || ''}
-                  placeholder="e.g., python:3.11"
-                  variant="outlined"
-                  style={{ width: '25%' }}
-                />
               ) : (
                 ''
               )}

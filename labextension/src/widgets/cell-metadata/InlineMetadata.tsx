@@ -221,10 +221,10 @@ export class InlineMetadata extends React.Component<IProps, IState> {
     );
   }
 
-  createDockerImageText() {
+  createBaseImageText() {
     return this.props.baseImage ? (
       <p style={{ fontStyle: 'italic', marginLeft: '10px' }}>
-        image: {this.props.baseImage}
+        Base Image: {this.props.baseImage}
       </p>
     ) : (
       ''
@@ -269,8 +269,8 @@ export class InlineMetadata extends React.Component<IProps, IState> {
         ) : null}
         {this.state.dependencies}
 
+        {this.createBaseImageText()}
         {this.createLimitsText()}
-        {this.createDockerImageText()}
       </>
     );
 

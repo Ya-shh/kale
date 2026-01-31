@@ -38,7 +38,7 @@ LABEL_TAG = r"^label:%s:(.*)$" % K8S_ANNOTATION_KEY
 # Limits map to K8s limits, like CPU, Mem, GPU, ...
 # E.g.: limit:nvidia.com/gpu:2
 LIMITS_TAG = r"^limit:([_a-z-\.\/]+):([_a-zA-Z0-9\.]+)$"
-# Image tag for per-step Docker image selection
+# Image tag for per-step Base image selection
 # E.g.: image:python:3.11-slim
 IMAGE_TAG = r"^image:(.+)$"
 
@@ -157,7 +157,7 @@ class NotebookConfig(PipelineConfig):
 
             if conf_type == "image":
                 # Image tag value is the rest after 'image:'
-                result["docker_image"] = ":".join(parts)
+                result["base_image"] = ":".join(parts)
         return result
 
 
@@ -328,7 +328,7 @@ class NotebookProcessor(BaseProcessor):
                         limits=tags.get("limits", {}),
                         labels=tags.get("labels", {}),
                         annotations=tags.get("annotations", {}),
-                        docker_image=tags.get("docker_image", ""),
+                        base_image=tags.get("base_image", ""),
                     )
                     self.pipeline.add_step(step)
                     for _prev_step in tags["prev_steps"]:
@@ -379,7 +379,7 @@ class NotebookProcessor(BaseProcessor):
         cell_annotations = dict()
         cell_labels = dict()
         cell_limits = dict()
-        cell_docker_image = None
+        cell_base_image = None
 
         # the notebook cell was not tagged
         if "tags" not in metadata or len(metadata["tags"]) == 0:
@@ -435,7 +435,7 @@ class NotebookProcessor(BaseProcessor):
 
             if tag_name == "image":
                 # Image value is the rest after 'image:'
-                cell_docker_image = ":".join(tag_parts)
+                cell_base_image = ":".join(tag_parts)
 
             # name of the future Pipeline step
             if tag_name in ["step"]:
@@ -468,13 +468,13 @@ class NotebookProcessor(BaseProcessor):
                 )
             parsed_tags["limits"] = cell_limits
 
-        if cell_docker_image:
+        if cell_base_image:
             if not parsed_tags["step_names"]:
                 raise ValueError(
-                    "A cell can not provide a Docker image in a"
+                    "A cell can not provide a Base image in a"
                     " cell that does not declare a step name."
                 )
-            parsed_tags["docker_image"] = cell_docker_image
+            parsed_tags["base_image"] = cell_base_image
         return parsed_tags
 
     def get_pipeline_parameters_source(self):

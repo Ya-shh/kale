@@ -568,6 +568,7 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
                 <InlineCellsMetadata
                   onMetadataEnable={this.onMetadataEnable}
                   notebook={activeNotebook}
+                  pipelineBaseImage={this.state.metadata.base_image}
                 />
               )}
             </div>

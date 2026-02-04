@@ -18,6 +18,7 @@ import ColorUtils from '../../lib/ColorUtils';
 import {
   RESERVED_CELL_NAMES,
   RESERVED_CELL_NAMES_HELP_TEXT,
+  DEFAULT_BASE_IMAGE,
 } from './CellMetadataEditor';
 import EditIcon from '@mui/icons-material/Edit';
 import { CellMetadataContext } from '../../lib/CellMetadataContext';
@@ -30,6 +31,7 @@ interface IProps {
   baseImage?: string;
   cellElement: any;
   cellIndex: number;
+  pipelineBaseImage?: string;
 }
 
 interface IState {
@@ -228,12 +230,17 @@ export class InlineMetadata extends React.Component<IProps, IState> {
   }
 
   createBaseImageText() {
-    return this.props.baseImage ? (
+    const effectiveImage =
+      this.props.baseImage ||
+      this.props.pipelineBaseImage ||
+      DEFAULT_BASE_IMAGE;
+    const isDefault = !this.props.baseImage;
+
+    return (
       <p style={{ fontStyle: 'italic', marginLeft: '10px' }}>
-        Base Image: {this.props.baseImage}
+        Base Image: {effectiveImage}
+        {isDefault ? ' (default)' : ''}
       </p>
-    ) : (
-      ''
     );
   }
 
@@ -275,8 +282,8 @@ export class InlineMetadata extends React.Component<IProps, IState> {
         ) : null}
         {this.state.dependencies}
 
-        {this.createBaseImageText()}
         {this.createLimitsText()}
+        {this.createBaseImageText()}
       </>
     );
 

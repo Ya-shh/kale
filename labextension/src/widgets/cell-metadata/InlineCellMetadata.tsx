@@ -38,6 +38,7 @@ import { createPortal } from 'react-dom';
 interface IProps {
   notebook: NotebookPanel;
   onMetadataEnable: (isEnabled: boolean) => void;
+  pipelineBaseImage?: string;
 }
 
 type Editors = { [index: string]: EditorProps };
@@ -280,6 +281,7 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
           baseImage={tags.baseImage}
           previousBlockName={previousBlockName}
           cellIndex={index}
+          pipelineBaseImage={this.props.pipelineBaseImage}
         />,
         metadataParent,
       );

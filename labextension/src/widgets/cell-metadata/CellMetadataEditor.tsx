@@ -63,6 +63,8 @@ export const RESERVED_CELL_NAMES_CHIP_COLOR: { [id: string]: string } = {
   functions: 'a32626',
 };
 
+export const DEFAULT_BASE_IMAGE = 'python:3.12';
+
 const STEP_NAME_ERROR_MSG = `Step name must consist of lower case alphanumeric
  characters or '_', and can not start with a digit.`;
 
@@ -74,6 +76,7 @@ export interface IProps {
   limits?: { [id: string]: string };
   // Base image for this step
   baseImage?: string;
+  pipelineBaseImage?: string;
 }
 
 // this stores the name of a block and its color (form the name hash)
@@ -459,14 +462,27 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
               )}
 
               {cellType === 'step' ? (
-                <Input
-                  label={'Base Image'}
-                  updateValue={this.updateBaseImage}
-                  value={this.props.baseImage || ''}
-                  placeholder="e.g., python:3.11"
+                <Button
                   variant="outlined"
-                  style={{ width: '25%' }}
-                />
+                  size="small"
+                  disabled
+                  style={{
+                    textTransform: 'none',
+                    minWidth: '150px',
+                    backgroundColor: '#f5f5f5',
+                    borderColor: '#1976d2',
+                    color: '#333',
+                    opacity: 1,
+                    marginRight: '8px',
+                  }}
+                  title="Base Image for this step"
+                >
+                  Base Image: 🐳{' '}
+                  {this.props.baseImage ||
+                    this.props.pipelineBaseImage ||
+                    DEFAULT_BASE_IMAGE}
+                  {!this.props.baseImage ? ' (default)' : ''}
+                </Button>
               ) : (
                 ''
               )}

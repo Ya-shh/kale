@@ -101,6 +101,19 @@ export default class Commands {
     return baseImage;
   };
 
+  getDefaultBaseImage = async (): Promise<string> => {
+    try {
+      return await _legacy_executeRpc(
+        this._notebook,
+        this._kernel,
+        'nb.get_default_base_image',
+      );
+    } catch (error) {
+      console.error('Failed to retrieve default base image', error);
+      return 'python:3.12';
+    }
+  };
+
   getExperiments = async (
     experiment: { id: string; name: string },
     experimentName: string,

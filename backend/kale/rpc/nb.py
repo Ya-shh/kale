@@ -92,6 +92,13 @@ def get_base_image(request):
     return podutils.get_docker_base_image()
 
 
+def get_default_base_image(request):
+    """Get the default base image used when no other image is specified."""
+    from kale.pipeline import DEFAULT_BASE_IMAGE
+
+    return DEFAULT_BASE_IMAGE
+
+
 # fixme: Remove the debug argument from the labextension RPC call.
 def compile_notebook(request, source_notebook_path, notebook_metadata_overrides=None, debug=False):
     """Compile the notebook to KFP DSL."""

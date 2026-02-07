@@ -34,6 +34,7 @@ VOLUME_ACCESS_MODE_MAP = {
     "rwm": ["ReadWriteMany"],
 }
 DEFAULT_VOLUME_ACCESS_MODE = VOLUME_ACCESS_MODE_MAP["rwm"]
+DEFAULT_BASE_IMAGE = "python:3.12"
 
 
 class VolumeConfig(Config):
@@ -141,7 +142,7 @@ class PipelineConfig(Config):
                 #   pod
                 # * ApiException: K8s call to read pod raised exception;
                 # Use kfp default image
-                self.base_image = ""
+                self.base_image = DEFAULT_BASE_IMAGE
 
     def _set_volume_storage_class(self):
         if not self.storage_class_name:

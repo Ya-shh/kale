@@ -63,6 +63,7 @@ interface IState {
   isEnabled: boolean;
   namespace: string;
   kfpUiHost: string;
+  defaultBaseImage: string;
 }
 
 // keep names with Python notation because they will be read
@@ -96,6 +97,7 @@ export const DefaultState: IState = {
   isEnabled: false,
   namespace: '',
   kfpUiHost: '',
+  defaultBaseImage: '',
 };
 
 let deployIndex = 0;
@@ -225,7 +227,8 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
       await notebook.sessionContext.ready;
 
       const kfpUiHost = (await commands.getKfpUiHost()) || DEFAULT_UI_URL;
-      this.setState({ kfpUiHost: kfpUiHost });
+      const defaultBaseImage = await commands.getDefaultBaseImage();
+      this.setState({ kfpUiHost: kfpUiHost, defaultBaseImage });
 
       // get notebook metadata
       const notebookMetadata = NotebookUtils.getMetaData(
@@ -569,6 +572,7 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
                   onMetadataEnable={this.onMetadataEnable}
                   notebook={activeNotebook}
                   pipelineBaseImage={this.state.metadata.base_image}
+                  defaultBaseImage={this.state.defaultBaseImage}
                 />
               )}
             </div>

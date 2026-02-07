@@ -32,6 +32,7 @@ interface IProps {
   cellElement: any;
   cellIndex: number;
   pipelineBaseImage?: string;
+  defaultBaseImage?: string;
 }
 
 interface IState {
@@ -233,6 +234,7 @@ export class InlineMetadata extends React.Component<IProps, IState> {
     const effectiveImage =
       this.props.baseImage ||
       this.props.pipelineBaseImage ||
+      this.props.defaultBaseImage ||
       DEFAULT_BASE_IMAGE;
     const isDefault = !this.props.baseImage;
 

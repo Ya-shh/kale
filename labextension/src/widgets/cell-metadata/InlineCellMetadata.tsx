@@ -39,6 +39,7 @@ interface IProps {
   notebook: NotebookPanel;
   onMetadataEnable: (isEnabled: boolean) => void;
   pipelineBaseImage?: string;
+  defaultBaseImage?: string;
 }
 
 type Editors = { [index: string]: EditorProps };
@@ -282,6 +283,7 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
           previousBlockName={previousBlockName}
           cellIndex={index}
           pipelineBaseImage={this.props.pipelineBaseImage}
+          defaultBaseImage={this.props.defaultBaseImage}
         />,
         metadataParent,
       );
@@ -333,6 +335,8 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
         stepDependencies={editorProps.stepDependencies}
         limits={editorProps.limits}
         baseImage={editorProps.baseImage}
+        pipelineBaseImage={this.props.pipelineBaseImage}
+        defaultBaseImage={this.props.defaultBaseImage}
       />,
       document.body,
     );

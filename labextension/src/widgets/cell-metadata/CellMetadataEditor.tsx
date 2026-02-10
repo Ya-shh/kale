@@ -472,34 +472,28 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
                   options={this.state.blockDependenciesChoices}
                   variant="outlined"
                   selected={this.props.stepDependencies || []}
-                  style={{ width: '35%' }}
+                  style={{ width: '30%' }}
                 />
               ) : (
                 ''
               )}
 
               {cellType === 'step' ? (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => this.toggleBaseImageDialog()}
-                  style={{
-                    textTransform: 'none',
-                    minWidth: '150px',
-                    backgroundColor: '#f5f5f5',
-                    borderColor: '#1976d2',
-                    color: '#333',
-                    marginRight: '8px',
-                  }}
-                  title="Click to change base image"
-                >
-                  Base Image: 🐳{' '}
-                  {this.props.baseImage ||
-                    this.props.pipelineBaseImage ||
-                    this.props.defaultBaseImage ||
-                    DEFAULT_BASE_IMAGE}
-                  {!this.props.baseImage ? ' (default)' : ''}
-                </Button>
+                <div style={{ padding: 0, marginRight: '4px' }}>
+                  <Button
+                    disabled={
+                      !(this.props.stepName && this.props.stepName.length > 0)
+                    }
+                    color="primary"
+                    variant="contained"
+                    size="small"
+                    title="Base Image"
+                    onClick={() => this.toggleBaseImageDialog()}
+                    style={{ width: '5%' }}
+                  >
+                    IMAGE
+                  </Button>
+                </div>
               ) : (
                 ''
               )}

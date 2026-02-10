@@ -20,7 +20,7 @@ from tabulate import tabulate
 
 from kale import Compiler, NotebookProcessor, marshal
 from kale.common import astutils, kfputils, kfutils, podutils
-from kale.rpc.errors import RPCInternalError
+from kale.rpc.errors import RPCInternalError, RPCUnhandledError
 from kale.rpc.log import create_adapter
 
 KALE_MARSHAL_DIR_POSTFIX = ".kale.marshal.dir"
@@ -102,20 +102,43 @@ def get_default_base_image(request):
 # fixme: Remove the debug argument from the labextension RPC call.
 def compile_notebook(request, source_notebook_path, notebook_metadata_overrides=None, debug=False):
     """Compile the notebook to KFP DSL."""
-    processor = NotebookProcessor(source_notebook_path, notebook_metadata_overrides)
-    pipeline = processor.run()
-    imports_and_functions = processor.get_imports_and_functions()
-    script_path = Compiler(pipeline, imports_and_functions).compile()
-    # FIXME: Why were we tapping into the Kale logger?
-    # instance = Kale(source_notebook_path, notebook_metadata_overrides, debug)
-    # instance.logger = request.log if hasattr(request, "log") else logger
+    try:
+        processor = NotebookProcessor(source_notebook_path, notebook_metadata_overrides)
+        pipeline = processor.run()
+        imports_and_functions = processor.get_imports_and_functions()
+        script_path = Compiler(pipeline, imports_and_functions).compile()
 
-    package_path = kfputils.compile_pipeline(script_path, pipeline.config.pipeline_name)
+        """FIXME: Why were we tapping into the Kale logger?
+        instance = Kale(source_notebook_path,
+        notebook_metadata_overrides, debug)
+        instance.logger = request.log if
+        hasattr(request, "log") else logger"""
 
-    return {
-        "pipeline_package_path": os.path.relpath(package_path),
-        "pipeline_metadata": pipeline.config.to_dict(),
-    }
+        package_path = kfputils.compile_pipeline(script_path, pipeline.config.pipeline_name)
+
+        return {
+            "pipeline_package_path": os.path.relpath(package_path),
+            "pipeline_metadata": pipeline.config.to_dict(),
+        }
+    except ValueError as e:
+        msg = str(e)
+        request.log.exception("ValueError during notebook compilation: %s", msg)
+        if "Task is missing from pipeline" in msg:
+            # Provide guidance to the user about how to fix the issue.
+            raise RPCUnhandledError(
+                details=(
+                    "The pipeline does not have any steps. "
+                    "Please tag a cell as a pipeline step or set "
+                    "`steps_defaults` in the notebook metadata."
+                ),
+                trans_id=request.trans_id,
+            )
+        raise RPCInternalError(details=msg, trans_id=request.trans_id)
+    except Exception as e:
+        # Let the run dispatcher handle generic exceptions as unhandled,
+        # but log for debug purposes.
+        request.log.exception("Unexpected error during notebook compilation: %s", e)
+        raise
 
 
 def validate_notebook(request, source_notebook_path, notebook_metadata_overrides=None):

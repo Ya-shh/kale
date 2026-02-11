@@ -285,6 +285,7 @@ export default class Commands {
           'pipeline.yaml',
           'kale.py',
         ),
+        compiledContent: compileNotebook.script_content,
       });
     }
     return compileNotebook;

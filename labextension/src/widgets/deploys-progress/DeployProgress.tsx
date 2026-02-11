@@ -21,6 +21,7 @@ import UnknownIcon from '@mui/icons-material/Help';
 import PendingIcon from '@mui/icons-material/Schedule';
 import SkippedIcon from '@mui/icons-material/SkipNext';
 import SuccessIcon from '@mui/icons-material/CheckCircle';
+import GetAppIcon from '@mui/icons-material/GetApp';
 
 import StatusRunning from '../../icons/statusRunning';
 import TerminatedIcon from '../../icons/statusTerminated';
@@ -166,6 +167,22 @@ export const DeployProgress: React.FunctionComponent<
     }
   };
 
+  const handleDownloadClick = () => {
+    if (props.compiledPath && props.compiledContent) {
+      const fileName =
+        props.compiledPath.split('/').pop() || 'pipeline.kale.py';
+      const blob = new Blob([props.compiledContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
   // Handle close click safely
   const handleCloseClick = () => {
     if (props.onRemove) {
@@ -215,6 +232,11 @@ export const DeployProgress: React.FunctionComponent<
             style={{ color: DeployUtils.color.success, height: 18, width: 18 }}
           />
         </a>
+        <GetAppIcon
+          style={{ height: 18, width: 18, cursor: 'pointer', marginLeft: 4 }}
+          titleAccess="Download compiled file"
+          onClick={handleDownloadClick}
+        />
       </React.Fragment>
     );
   } else if (props.compiledPath === 'error') {

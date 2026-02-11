@@ -116,9 +116,13 @@ def compile_notebook(request, source_notebook_path, notebook_metadata_overrides=
 
         package_path = kfputils.compile_pipeline(script_path, pipeline.config.pipeline_name)
 
+        with open(script_path) as f:
+            script_content = f.read()
+
         return {
             "pipeline_package_path": os.path.relpath(package_path),
             "pipeline_metadata": pipeline.config.to_dict(),
+            "script_content": script_content,
         }
     except ValueError as e:
         msg = str(e)

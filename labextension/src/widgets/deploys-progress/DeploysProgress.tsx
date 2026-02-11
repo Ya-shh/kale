@@ -36,6 +36,7 @@ export type DeployProgressState = {
   // snapshotWarnings?: any;
   showCompileProgress?: boolean;
   compiledPath?: string;
+  compiledContent?: string;
   compileWarnings?: string[];
   showUploadProgress?: boolean;
   pipeline?: boolean | UploadPipelineResp;
@@ -82,6 +83,7 @@ export const DeploysProgress: React.FunctionComponent<
             // snapshotWarnings={dpState.snapshotWarnings}
             showCompileProgress={dpState.showCompileProgress}
             compiledPath={dpState.compiledPath}
+            compiledContent={dpState.compiledContent}
             compileWarnings={dpState.compileWarnings}
             showUploadProgress={dpState.showUploadProgress}
             pipeline={dpState.pipeline}

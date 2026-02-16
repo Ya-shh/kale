@@ -195,18 +195,32 @@ export default class Commands {
       source_notebook_path: notebookPath,
       notebook_metadata_overrides: metadata,
     };
-    const validateNotebook = await _legacy_executeRpcAndShowRPCError(
-      this._notebook,
-      this._kernel,
-      'nb.validate_notebook',
-      validateNotebookArgs,
-    );
-    if (!validateNotebook) {
-      onUpdate({ notebookValidation: false });
-      return false;
+    try {
+      const validateNotebook = await _legacy_executeRpc(
+        this._notebook,
+        this._kernel,
+        'nb.validate_notebook',
+        validateNotebookArgs,
+      );
+      if (!validateNotebook) {
+        onUpdate({ notebookValidation: false });
+        return false;
+      }
+      onUpdate({ notebookValidation: true });
+      return true;
+    } catch (error) {
+      if (error instanceof RPCError) {
+        const rpcErr = error.error as { err_message?: string };
+        const message = rpcErr.err_message || 'Unknown validation error';
+        onUpdate({ notebookValidation: false });
+        await NotebookUtils.showMessage('Validation Failed', [
+          'The pipeline metadata is invalid. Please fix the following error:',
+          message,
+        ]);
+        return false;
+      }
+      throw error;
     }
-    onUpdate({ notebookValidation: true });
-    return true;
   };
 
   /**

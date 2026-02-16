@@ -198,6 +198,7 @@ export interface IInputProps extends Omit<
   variant?: 'standard' | 'outlined' | 'filled';
   updateValue: (value: string, index: number) => void;
   onBeforeUpdate?: (value: string) => boolean;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 export const Input: React.FunctionComponent<IInputProps> = props => {
@@ -218,6 +219,7 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
     InputProps,
     updateValue,
     onBeforeUpdate = undefined,
+    onValidationChange,
     ...rest
   } = props;
 
@@ -256,8 +258,10 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
     const re = new RegExp(regexPattern);
     if (!re.test(value)) {
       updateError(true);
+      onValidationChange?.(false);
     } else {
       updateError(false);
+      onValidationChange?.(true);
       updateValue(value, index);
     }
   };
@@ -287,8 +291,10 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
       const hasError = onBeforeUpdate(newValue);
       if (hasError) {
         updateError(true);
+        onValidationChange?.(false);
       } else {
         updateError(false);
+        onValidationChange?.(true);
         debouncedCallback(newValue, inputIndex || 0);
       }
     }

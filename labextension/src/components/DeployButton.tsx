@@ -51,6 +51,7 @@ const StyledPopper = styled(Popper)({
 interface ISplitDeployButton {
   running: boolean;
   handleClick: (value: string) => void;
+  disabled?: boolean;
   // katibRun: boolean;
 }
 
@@ -112,7 +113,7 @@ export const SplitDeployButton: React.FunctionComponent<
               <MainButton
                 color="primary"
                 onClick={handleMainButtonClick}
-                disabled={props.running}
+                disabled={props.running || props.disabled}
               >
                 {props.running ? (
                   <CircularProgress thickness={6} size={14} color="secondary" />

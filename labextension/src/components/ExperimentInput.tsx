@@ -96,6 +96,7 @@ interface IExperimentInput {
   selected: string; // Experiment ID
   value: string; // Experiment Name
   loading: boolean;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 export const ExperimentInput: React.FunctionComponent<
@@ -110,6 +111,10 @@ export const ExperimentInput: React.FunctionComponent<
     const value = selected === NEW_EXPERIMENT.id ? '' : getName(selected);
     const experiment: IExperiment = { id: selected, name: value };
     props.updateValue(experiment);
+    // When selecting an existing experiment, form is valid (no name input needed)
+    if (selected !== NEW_EXPERIMENT.id) {
+      props.onValidationChange?.(true);
+    }
   };
 
   const updateValue = (value: string, index?: number) => {
@@ -143,6 +148,7 @@ export const ExperimentInput: React.FunctionComponent<
             regexErrorMsg={regexErrorMsg}
             variant="standard"
             inputIndex={0}
+            onValidationChange={props.onValidationChange}
           />
         </div>
       )}

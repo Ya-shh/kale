@@ -202,21 +202,17 @@ export default class Commands {
         'nb.validate_notebook',
         validateNotebookArgs,
       );
-      if (!validateNotebook) {
-        onUpdate({ notebookValidation: false });
-        return false;
-      }
-      onUpdate({ notebookValidation: true });
-      return true;
+      onUpdate({ notebookValidation: validateNotebook });
+      return validateNotebook;
     } catch (error) {
       if (error instanceof RPCError) {
-        const rpcErr = error.error as { err_message?: string };
-        const message = rpcErr.err_message || 'Unknown validation error';
+        const rpcErr = error.error as { err_message?: string; err_details?: string };
+        const message =
+          rpcErr.err_details ||
+          rpcErr.err_message ||
+          'An unexpected error occurred during validation.';
         onUpdate({ notebookValidation: false });
-        await NotebookUtils.showMessage('Validation Failed', [
-          'The pipeline metadata is invalid. Please fix the following error:',
-          message,
-        ]);
+        await NotebookUtils.showMessage('Validation Failed', [message]);
         return false;
       }
       throw error;
@@ -278,15 +274,30 @@ export default class Commands {
       notebook_metadata_overrides: metadata,
       debug: deployDebugMessage,
     };
-    const compileNotebook = await _legacy_executeRpcAndShowRPCError(
-      this._notebook,
-      this._kernel,
-      'nb.compile_notebook',
-      compileNotebookArgs,
-    );
+    let compileNotebook;
+    try {
+      compileNotebook = await _legacy_executeRpc(
+        this._notebook,
+        this._kernel,
+        'nb.compile_notebook',
+        compileNotebookArgs,
+      );
+    } catch (error) {
+      if (error instanceof RPCError) {
+        const rpcErr = error.error as { err_message?: string; err_details?: string };
+        const message =
+          rpcErr.err_details ||
+          rpcErr.err_message ||
+          'An unexpected error occurred during compilation.';
+        onUpdate({ compiledPath: 'error' });
+        await NotebookUtils.showMessage('Compilation Failed', [message]);
+        return null;
+      }
+      throw error;
+    }
     if (!compileNotebook) {
       onUpdate({ compiledPath: 'error' });
-      await NotebookUtils.showMessage('Operation Failed', [
+      await NotebookUtils.showMessage('Compilation Failed', [
         'Could not compile pipeline.',
       ]);
     } else {

@@ -64,7 +64,7 @@ interface IState {
   namespace: string;
   kfpUiHost: string;
   defaultBaseImage: string;
-  formErrors: { pipelineName: boolean; experimentName: boolean };
+  formErrors: { pipelineNameError: boolean; experimentNameError: boolean };
 }
 
 // keep names with Python notation because they will be read
@@ -99,7 +99,7 @@ export const DefaultState: IState = {
   namespace: '',
   kfpUiHost: '',
   defaultBaseImage: '',
-  formErrors: { pipelineName: false, experimentName: false },
+  formErrors: { pipelineNameError: false, experimentNameError: false },
 };
 
 let deployIndex = 0;
@@ -187,13 +187,13 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
 
   onPipelineNameValidation = (isValid: boolean) => {
     this.setState(prevState => ({
-      formErrors: { ...prevState.formErrors, pipelineName: !isValid },
+      formErrors: { ...prevState.formErrors, pipelineNameError: !isValid },
     }));
   };
 
   onExperimentNameValidation = (isValid: boolean) => {
     this.setState(prevState => ({
-      formErrors: { ...prevState.formErrors, experimentName: !isValid },
+      formErrors: { ...prevState.formErrors, experimentNameError: !isValid },
     }));
   };
 
@@ -684,8 +684,8 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
               running={this.state.runDeployment}
               handleClick={this.activateRunDeployState}
               disabled={
-                this.state.formErrors.pipelineName ||
-                this.state.formErrors.experimentName
+                this.state.formErrors.pipelineNameError ||
+                this.state.formErrors.experimentNameError
               }
             />
           </div>

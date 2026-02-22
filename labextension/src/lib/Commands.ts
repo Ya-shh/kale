@@ -195,28 +195,18 @@ export default class Commands {
       source_notebook_path: notebookPath,
       notebook_metadata_overrides: metadata,
     };
-    try {
-      const validateNotebook = await _legacy_executeRpc(
-        this._notebook,
-        this._kernel,
-        'nb.validate_notebook',
-        validateNotebookArgs,
-      );
-      onUpdate({ notebookValidation: validateNotebook });
-      return validateNotebook;
-    } catch (error) {
-      if (error instanceof RPCError) {
-        const rpcErr = error.error as { err_message?: string; err_details?: string };
-        const message =
-          rpcErr.err_details ||
-          rpcErr.err_message ||
-          'An unexpected error occurred during validation.';
-        onUpdate({ notebookValidation: false });
-        await NotebookUtils.showMessage('Validation Failed', [message]);
-        return false;
-      }
-      throw error;
+    const validateNotebook = await _legacy_executeRpcAndShowRPCError(
+      this._notebook,
+      this._kernel,
+      'nb.validate_notebook',
+      validateNotebookArgs,
+    );
+    if (validateNotebook === null) {
+      onUpdate({ notebookValidation: false });
+      return false;
     }
+    onUpdate({ notebookValidation: validateNotebook });
+    return validateNotebook;
   };
 
   /**
@@ -274,32 +264,15 @@ export default class Commands {
       notebook_metadata_overrides: metadata,
       debug: deployDebugMessage,
     };
-    let compileNotebook;
-    try {
-      compileNotebook = await _legacy_executeRpc(
-        this._notebook,
-        this._kernel,
-        'nb.compile_notebook',
-        compileNotebookArgs,
-      );
-    } catch (error) {
-      if (error instanceof RPCError) {
-        const rpcErr = error.error as { err_message?: string; err_details?: string };
-        const message =
-          rpcErr.err_details ||
-          rpcErr.err_message ||
-          'An unexpected error occurred during compilation.';
-        onUpdate({ compiledPath: 'error' });
-        await NotebookUtils.showMessage('Compilation Failed', [message]);
-        return null;
-      }
-      throw error;
-    }
+    const compileNotebook = await _legacy_executeRpcAndShowRPCError(
+      this._notebook,
+      this._kernel,
+      'nb.compile_notebook',
+      compileNotebookArgs,
+    );
     if (!compileNotebook) {
       onUpdate({ compiledPath: 'error' });
-      await NotebookUtils.showMessage('Compilation Failed', [
-        'Could not compile pipeline.',
-      ]);
+      return null;
     } else {
       // Pass to the deploy progress the path to the generated py script:
       // compileNotebook is the name of the tar package, that generated in the

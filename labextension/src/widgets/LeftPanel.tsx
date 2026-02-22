@@ -64,7 +64,6 @@ interface IState {
   namespace: string;
   kfpUiHost: string;
   defaultBaseImage: string;
-  formErrors: { pipelineNameError: boolean; experimentNameError: boolean };
 }
 
 // keep names with Python notation because they will be read
@@ -99,7 +98,6 @@ export const DefaultState: IState = {
   namespace: '',
   kfpUiHost: '',
   defaultBaseImage: '',
-  formErrors: { pipelineNameError: false, experimentNameError: false },
 };
 
 let deployIndex = 0;
@@ -184,18 +182,6 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
         base_image: name,
       },
     }));
-
-  onPipelineNameValidation = (isValid: boolean) => {
-    this.setState(prevState => ({
-      formErrors: { ...prevState.formErrors, pipelineNameError: !isValid },
-    }));
-  };
-
-  onExperimentNameValidation = (isValid: boolean) => {
-    this.setState(prevState => ({
-      formErrors: { ...prevState.formErrors, experimentNameError: !isValid },
-    }));
-  };
 
   activateRunDeployState = (type: string) => {
     if (!this.state.runDeployment) {
@@ -580,6 +566,14 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
         experimentInputValue = selectedExperiments[0].name;
       }
     }
+    const pipelineNameValid = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(
+      this.state.metadata.pipeline_name,
+    );
+    const experimentNameRegex = /^[a-z]([-a-z0-9]*[a-z0-9])?$/;
+    const experimentNameValid =
+      experimentInputSelected !== NEW_EXPERIMENT.id ||
+      experimentNameRegex.test(experimentInputValue);
+
     const experiment_name_input = (
       <ExperimentInput
         updateValue={this.updateExperiment}
@@ -587,7 +581,6 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
         selected={experimentInputSelected}
         value={experimentInputValue}
         loading={this.state.gettingExperiments}
-        onValidationChange={this.onExperimentNameValidation}
       />
     );
 
@@ -602,7 +595,6 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
         regexErrorMsg={
           "Pipeline name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character."
         }
-        onValidationChange={this.onPipelineNameValidation}
       />
     );
 
@@ -683,10 +675,7 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
             <SplitDeployButton
               running={this.state.runDeployment}
               handleClick={this.activateRunDeployState}
-              disabled={
-                this.state.formErrors.pipelineNameError ||
-                this.state.formErrors.experimentNameError
-              }
+              disabled={!pipelineNameValid || !experimentNameValid}
             />
           </div>
         </div>

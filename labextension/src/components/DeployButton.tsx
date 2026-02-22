@@ -72,7 +72,7 @@ export const SplitDeployButton: React.FunctionComponent<
   ];
 
   const handleMenuItemClick = (
-    event: React.MouseEvent<HTMLLIElement>,
+    _event: React.MouseEvent<HTMLLIElement>,
     index: number,
   ) => {
     setSelectedIndex(index);
@@ -127,6 +127,7 @@ export const SplitDeployButton: React.FunctionComponent<
                 aria-controls={open ? 'menu-list-grow' : undefined}
                 aria-haspopup="true"
                 onClick={handleToggle}
+                disabled={props.running || props.disabled}
               >
                 <MoreVertIcon />
               </DropdownButton>

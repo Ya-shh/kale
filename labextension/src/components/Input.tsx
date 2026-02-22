@@ -166,7 +166,6 @@
 //   );
 // };
 import * as React from 'react';
-import { useDebouncedCallback } from 'use-debounce';
 import TextField, { TextFieldProps } from '@mui/material/TextField';
 import { styled } from '@mui/material/styles';
 
@@ -181,12 +180,13 @@ const StyledTextField = styled(TextField)({
   },
   '& .MuiFormHelperText-root': {
     color: 'var(--jp-info-color0)',
+    wordBreak: 'break-word',
   },
 });
 
 export interface IInputProps extends Omit<
   TextFieldProps,
-  'onChange' | 'value'
+  'onChange' | 'value' | 'InputProps'
 > {
   value: string | number;
   regex?: string;
@@ -198,13 +198,9 @@ export interface IInputProps extends Omit<
   variant?: 'standard' | 'outlined' | 'filled';
   updateValue: (value: string, index: number) => void;
   onBeforeUpdate?: (value: string) => boolean;
-  onValidationChange?: (isValid: boolean) => void;
 }
 
 export const Input: React.FunctionComponent<IInputProps> = props => {
-  const [value, setValue] = React.useState<string | number>('');
-  const [error, updateError] = React.useState(false);
-
   const {
     value: propsValue,
     className,
@@ -216,87 +212,63 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
     inputIndex,
     readOnly = false,
     variant = 'outlined',
-    InputProps,
     updateValue,
-    onBeforeUpdate = undefined,
-    onValidationChange,
+    onBeforeUpdate,
     ...rest
   } = props;
+
+  const [localValue, setLocalValue] = React.useState(String(propsValue));
+  const [beforeUpdateError, setBeforeUpdateError] = React.useState(false);
+
+  React.useEffect(() => {
+    setLocalValue(String(propsValue));
+  }, [propsValue]);
 
   const getRegex = (): string | RegExp | undefined => {
     if (regex) {
       return regex;
-    } else if (validation && validation === 'int') {
-      return /^(-\d)?\d*$/;
-    } else if (validation && validation === 'double') {
-      return /^(-\d)?\d*(\.\d)?\d*$/;
-    } else {
-      return undefined;
     }
+    if (validation === 'int') {
+      return /^(-\d)?\d*$/;
+    }
+    if (validation === 'double') {
+      return /^(-\d)?\d*(\.\d)?\d*$/;
+    }
+    return undefined;
   };
 
   const getRegexMessage = (): string | undefined => {
     if (regexErrorMsg) {
       return regexErrorMsg;
-    } else if (validation && validation === 'int') {
+    }
+    if (validation === 'int') {
       return 'Integer value required';
-    } else if (validation && validation === 'double') {
+    }
+    if (validation === 'double') {
       return 'Double value required';
-    } else {
-      return undefined;
     }
+    return undefined;
   };
 
-  const onChange = (value: string, index: number) => {
-    // if the input domain is restricted by a regex
-    const regexPattern = getRegex();
-    if (!regexPattern) {
-      updateValue(value, index);
-      return;
-    }
-
-    const re = new RegExp(regexPattern);
-    if (!re.test(value)) {
-      updateError(true);
-      onValidationChange?.(false);
-    } else {
-      updateError(false);
-      onValidationChange?.(true);
-      updateValue(value, index);
-    }
-  };
-
-  React.useEffect(() => {
-    // need this to set the value when the notebook is loaded and the metadata
-    // is updated
-    setValue(propsValue);
-  }, [propsValue]); // Only re-run the effect if propsValue changes
-
-  const debouncedCallback = useDebouncedCallback(
-    // function
-    (value: string, idx: number) => {
-      onChange(value, idx);
-    },
-    // delay in ms
-    500,
-  );
+  const regexPattern = getRegex();
+  const regexError =
+    regexPattern !== undefined && localValue !== ''
+      ? !new RegExp(regexPattern).test(localValue)
+      : false;
+  const error = regexError || beforeUpdateError;
 
   const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = evt.target.value;
-    setValue(newValue);
-
-    if (!onBeforeUpdate) {
-      debouncedCallback(newValue, inputIndex || 0);
-    } else {
-      const hasError = onBeforeUpdate(newValue);
-      if (hasError) {
-        updateError(true);
-        onValidationChange?.(false);
+    setLocalValue(newValue);
+    if (onBeforeUpdate) {
+      if (onBeforeUpdate(newValue)) {
+        setBeforeUpdateError(true);
       } else {
-        updateError(false);
-        onValidationChange?.(true);
-        debouncedCallback(newValue, inputIndex || 0);
+        setBeforeUpdateError(false);
+        updateValue(newValue, inputIndex || 0);
       }
+    } else {
+      updateValue(newValue, inputIndex || 0);
     }
   };
 
@@ -306,7 +278,7 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
       variant={variant}
       className={className}
       error={error}
-      value={value}
+      value={localValue}
       margin="dense"
       placeholder={placeholder}
       spellCheck={false}
@@ -314,10 +286,9 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
       slotProps={{
         input: {
           readOnly: readOnly,
-          ...InputProps,
         },
         inputLabel: {
-          shrink: !!placeholder || value !== '',
+          shrink: !!placeholder || localValue !== '',
         },
       }}
       onChange={handleChange}

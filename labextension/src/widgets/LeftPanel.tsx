@@ -32,7 +32,12 @@ import { Input } from '../components/Input';
 import Commands from '../lib/Commands';
 import { PageConfig } from '@jupyterlab/coreutils';
 import { KaleEmptyState } from './KaleEmptyState';
+import { KFPStatusBadge, KfpStatus } from '../components/KFPStatusBadge';
+import { executeRpc } from '../lib/RPCUtils';
 import kaleLogo from '../../style/icons/kale.svg';
+
+const KFP_STATUS_REFRESH_MS = 30_000;
+const KFP_STATUS_MAX_BACKOFF_MS = 300_000;
 
 const KALE_NOTEBOOK_METADATA_KEY = 'kubeflow_notebook';
 const DEFAULT_UI_URL = 'http://localhost:8080';
@@ -67,6 +72,7 @@ interface IState {
   namespace: string;
   kfpUiHost: string;
   defaultBaseImage: string;
+  kfpStatus: KfpStatus;
 }
 
 // keep names with Python notation because they will be read
@@ -103,6 +109,7 @@ export const DefaultState: IState = {
   namespace: '',
   kfpUiHost: '',
   defaultBaseImage: '',
+  kfpStatus: 'checking',
 };
 
 let deployIndex = 0;
@@ -110,6 +117,10 @@ let deployIndex = 0;
 export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
   // init state default values
   state = DefaultState;
+
+  private _kfpStatusTimerId: ReturnType<typeof setTimeout> | null = null;
+  private _kfpPollDelayMs = KFP_STATUS_REFRESH_MS;
+  private _kfpStatusPending = false;
 
   // Return the notebook file name without extension (e.g. 'MyNotebook' from 'path/to/MyNotebook.ipynb')
   getNotebookFileName = (notebook: NotebookPanel | null): string => {
@@ -210,7 +221,59 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
     this.setState(prevState => ({
       ...DefaultState,
       isEnabled: prevState.isEnabled,
+      kfpStatus: prevState.kfpStatus,
     }));
+
+  private _clearPollTimer = () => {
+    if (this._kfpStatusTimerId !== null) {
+      clearTimeout(this._kfpStatusTimerId);
+      this._kfpStatusTimerId = null;
+    }
+  };
+
+  private _scheduleNextPoll = () => {
+    this._clearPollTimer();
+    this._kfpStatusTimerId = setTimeout(
+      this.refreshKfpStatus,
+      this._kfpPollDelayMs,
+    );
+  };
+
+  private _handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      this._clearPollTimer();
+      this.refreshKfpStatus();
+    } else {
+      this._clearPollTimer();
+    }
+  };
+
+  refreshKfpStatus = async () => {
+    const kernelStatus = this.props.kernel?.status;
+    if (
+      !this.props.backend ||
+      this._kfpStatusPending ||
+      kernelStatus === 'dead' ||
+      kernelStatus === 'terminating'
+    ) {
+      return;
+    }
+    this._kfpStatusPending = true;
+    try {
+      await executeRpc(this.props.kernel, 'kfp.ping');
+      this.setState({ kfpStatus: 'connected' });
+      this._kfpPollDelayMs = KFP_STATUS_REFRESH_MS;
+    } catch {
+      this.setState({ kfpStatus: 'disconnected' });
+      this._kfpPollDelayMs = Math.min(
+        this._kfpPollDelayMs * 2,
+        KFP_STATUS_MAX_BACKOFF_MS,
+      );
+    } finally {
+      this._kfpStatusPending = false;
+      this._scheduleNextPoll();
+    }
+  };
 
   componentDidMount = () => {
     // Notebook tracker will signal when a notebook is changed
@@ -219,6 +282,16 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
     if (this.props.tracker.currentWidget instanceof NotebookPanel) {
       this.setNotebookPanel(this.props.tracker.currentWidget);
     }
+    document.addEventListener('visibilitychange', this._handleVisibilityChange);
+    this.refreshKfpStatus();
+  };
+
+  componentWillUnmount = () => {
+    this._clearPollTimer();
+    document.removeEventListener(
+      'visibilitychange',
+      this._handleVisibilityChange,
+    );
   };
 
   componentDidUpdate = (
@@ -642,6 +715,11 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
                   alt="Kale Logo"
                 />
               </p>
+              {this.props.backend && (
+                <div className="kfp-status-container">
+                  <KFPStatusBadge status={this.state.kfpStatus} />
+                </div>
+              )}
             </div>
 
             <div className="kale-component">

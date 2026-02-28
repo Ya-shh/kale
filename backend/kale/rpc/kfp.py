@@ -13,12 +13,24 @@
 # limitations under the License.
 
 import kfp
+import requests
 
 from kale.common import kfputils
 
 
 def _get_client(host=None):
     return kfp.Client()
+
+
+def ping(request):
+    c = _get_client()
+    host = getattr(c, "_uihost", None) or getattr(c, "host", None)
+    if host:
+        resp = requests.get(f"{host.rstrip('/')}/apis/v1beta1/healthz", timeout=5)
+        resp.raise_for_status()
+    else:
+        c.list_experiments(page_size=1)
+    return True
 
 
 def list_experiments(request):

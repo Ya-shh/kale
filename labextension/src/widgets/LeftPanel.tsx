@@ -81,6 +81,7 @@ export interface IKaleNotebookMetadata {
 
   steps_defaults?: string[];
   storage_class_name?: string;
+  output_path?: string;
 }
 
 export const DefaultState: IState = {
@@ -92,6 +93,7 @@ export const DefaultState: IState = {
     base_image: '',
     enable_caching: true, // Default value in KFP is true
     steps_defaults: [],
+    output_path: '',
   },
   runDeployment: false,
   deploymentType: 'compile',
@@ -179,6 +181,10 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
   updatePipelineDescription = (desc: string) =>
     this.setState(prevState => ({
       metadata: { ...prevState.metadata, pipeline_description: desc },
+    }));
+  updateOutputPath = (path: string) =>
+    this.setState(prevState => ({
+      metadata: { ...prevState.metadata, output_path: path },
     }));
   updateDockerImage = (name: string) =>
     this.setState(prevState => ({
@@ -396,6 +402,7 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
           base_image:
             notebookMetadata['base_image'] || DefaultState.metadata.base_image,
           steps_defaults: DefaultState.metadata.steps_defaults,
+          output_path: notebookMetadata['output_path'] || '',
         };
         this.setState({
           metadata: metadata,
@@ -609,6 +616,17 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
       />
     );
 
+    const output_path_input = (
+      <Input
+        variant="standard"
+        inputIndex={0}
+        label={'Output Directory'}
+        updateValue={this.updateOutputPath}
+        value={this.state.metadata.output_path || ''}
+        placeholder={'e.g. pipelines/output'}
+      />
+    );
+
     const enable_caching_toggle = (
       <FormControlLabel
         control={
@@ -694,6 +712,7 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
                 {experiment_name_input}
                 {pipeline_name_input}
                 {pipeline_desc_input}
+                {output_path_input}
                 {enable_caching_toggle}
               </div>
             </div>

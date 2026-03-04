@@ -37,7 +37,6 @@ import { executeRpc } from '../lib/RPCUtils';
 import kaleLogo from '../../style/icons/kale.svg';
 
 const KFP_STATUS_REFRESH_MS = 30_000;
-const KFP_STATUS_MAX_BACKOFF_MS = 300_000;
 
 const KALE_NOTEBOOK_METADATA_KEY = 'kubeflow_notebook';
 const DEFAULT_UI_URL = 'http://localhost:8080';
@@ -116,9 +115,7 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
   // init state default values
   state = DefaultState;
 
-  private _kfpStatusTimerId: ReturnType<typeof setTimeout> | null = null;
-  private _kfpPollDelayMs = KFP_STATUS_REFRESH_MS;
-  private _kfpStatusPending = false;
+  private _kfpPollTimerId: ReturnType<typeof setInterval> | null = null;
 
   // Return the notebook file name without extension (e.g. 'MyNotebook' from 'path/to/MyNotebook.ipynb')
   getNotebookFileName = (notebook: NotebookPanel | null): string => {
@@ -218,55 +215,17 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
       kfpStatus: prevState.kfpStatus,
     }));
 
-  private _clearPollTimer = () => {
-    if (this._kfpStatusTimerId !== null) {
-      clearTimeout(this._kfpStatusTimerId);
-      this._kfpStatusTimerId = null;
-    }
-  };
-
-  private _scheduleNextPoll = () => {
-    this._clearPollTimer();
-    this._kfpStatusTimerId = setTimeout(
-      this.refreshKfpStatus,
-      this._kfpPollDelayMs,
-    );
-  };
-
-  private _handleVisibilityChange = () => {
-    if (document.visibilityState === 'visible') {
-      this._clearPollTimer();
-      this.refreshKfpStatus();
-    } else {
-      this._clearPollTimer();
-    }
-  };
-
   refreshKfpStatus = async () => {
     const kernelStatus = this.props.kernel?.status;
     if (
       !this.props.backend ||
-      this._kfpStatusPending ||
       kernelStatus === 'dead' ||
       kernelStatus === 'terminating'
     ) {
       return;
     }
-    this._kfpStatusPending = true;
-    try {
-      await executeRpc(this.props.kernel, 'kfp.ping');
-      this.setState({ kfpStatus: 'connected' });
-      this._kfpPollDelayMs = KFP_STATUS_REFRESH_MS;
-    } catch {
-      this.setState({ kfpStatus: 'disconnected' });
-      this._kfpPollDelayMs = Math.min(
-        this._kfpPollDelayMs * 2,
-        KFP_STATUS_MAX_BACKOFF_MS,
-      );
-    } finally {
-      this._kfpStatusPending = false;
-      this._scheduleNextPoll();
-    }
+    const isConnected = await executeRpc(this.props.kernel, 'kfp.ping');
+    this.setState({ kfpStatus: isConnected ? 'connected' : 'disconnected' });
   };
 
   componentDidMount = () => {
@@ -276,16 +235,17 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
     if (this.props.tracker.currentWidget instanceof NotebookPanel) {
       this.setNotebookPanel(this.props.tracker.currentWidget);
     }
-    document.addEventListener('visibilitychange', this._handleVisibilityChange);
     this.refreshKfpStatus();
+    this._kfpPollTimerId = setInterval(
+      this.refreshKfpStatus,
+      KFP_STATUS_REFRESH_MS,
+    );
   };
 
   componentWillUnmount = () => {
-    this._clearPollTimer();
-    document.removeEventListener(
-      'visibilitychange',
-      this._handleVisibilityChange,
-    );
+    if (this._kfpPollTimerId !== null) {
+      clearInterval(this._kfpPollTimerId);
+    }
   };
 
   componentDidUpdate = (

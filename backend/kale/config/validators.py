@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+import os
 import re
 from typing import Any
 
@@ -207,3 +208,20 @@ class PositiveIntegerValidator(Validator):
             raise ValueError(f"'{value}' is not of type 'int'")
         if value <= 0:
             raise ValueError(f"'{value}' is not a positive integer")
+
+
+class OutputPathValidator(Validator):
+    """Validates that an output path is a safe relative path."""
+
+    def _validate(self, value: str):
+        if not value:
+            return
+        if os.path.isabs(value):
+            raise ValueError(
+                f"'{value}' is not a valid output directory. Please use a relative path"
+                " (e.g. 'pipelines/output')."
+            )
+        if ".." in value.split(os.sep):
+            raise ValueError(
+                f"'{value}' is not a valid output directory. The path cannot contain '..'."
+            )

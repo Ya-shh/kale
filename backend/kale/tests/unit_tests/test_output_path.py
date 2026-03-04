@@ -17,6 +17,8 @@
 import os
 from unittest.mock import patch
 
+import pytest
+
 from kale import NotebookConfig
 from kale.compiler import Compiler
 from kale.pipeline import Pipeline, PipelineConfig
@@ -143,3 +145,55 @@ class TestSaveCompiledCode:
             result = compiler._save_compiled_code()
 
         assert compiler.dsl_script_path == result
+
+
+# ---------------------------------------------------------------------------
+# Invalid output_path validation tests
+# ---------------------------------------------------------------------------
+
+
+class TestOutputPathValidation:
+    def test_absolute_path_is_rejected(self):
+        """Absolute paths like '/tmp/output' should be rejected."""
+        with pytest.raises(ValueError, match="not a valid output directory.*relative path"):
+            PipelineConfig(
+                pipeline_name="test-pipeline",
+                experiment_name="test-experiment",
+                output_path="/tmp/output",
+            )
+
+    def test_dotdot_path_is_rejected(self):
+        """Paths containing '..' should be rejected."""
+        with pytest.raises(ValueError, match="not a valid output directory.*cannot contain"):
+            PipelineConfig(
+                pipeline_name="test-pipeline",
+                experiment_name="test-experiment",
+                output_path="../outside",
+            )
+
+    def test_dotdot_nested_path_is_rejected(self):
+        """Nested paths with '..' like 'foo/../../bar' should be rejected."""
+        with pytest.raises(ValueError, match="not a valid output directory.*cannot contain"):
+            PipelineConfig(
+                pipeline_name="test-pipeline",
+                experiment_name="test-experiment",
+                output_path="foo/../../bar",
+            )
+
+    def test_valid_relative_path_is_accepted(self):
+        """Normal relative paths like 'pipelines/output' should work fine."""
+        config = PipelineConfig(
+            pipeline_name="test-pipeline",
+            experiment_name="test-experiment",
+            output_path="pipelines/output",
+        )
+        assert config.output_path == "pipelines/output"
+
+    def test_empty_string_is_accepted(self):
+        """Empty string (default) should pass validation."""
+        config = PipelineConfig(
+            pipeline_name="test-pipeline",
+            experiment_name="test-experiment",
+            output_path="",
+        )
+        assert config.output_path == ""

@@ -115,7 +115,7 @@ class PipelineConfig(Config):
         type=str, validators=[validators.IsLowerValidator, validators.VolumeAccessModeValidator]
     )
     timeout = Field(type=int, validators=[validators.PositiveIntegerValidator])
-    output_path = Field(type=str, default="")
+    output_path = Field(type=str, default="", validators=[validators.OutputPathValidator])
 
     @property
     def source_path(self):

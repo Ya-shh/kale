@@ -142,8 +142,6 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
     cells: CellList,
     args: IObservableList.IChangedArgs<ICellModel>,
   ) => {
-    this.refreshEditorsPropsAndInlineMetadata();
-
     const prevValue = args.oldValues[0];
     // Change type 'set' is when a cell changes its type. Even if a user changes
     // multiple cells using Shift + click the args.oldValues has only one cell
@@ -160,8 +158,10 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
 
     // Change type 'remove' is when a cell is removed from the notebook.
     if (args.type === 'remove') {
-      TagsUtils.removeOldDependencies(this.props.notebook, prevValue);
+      TagsUtils.removeOldDependencies(this.props.notebook);
     }
+
+    this.refreshEditorsPropsAndInlineMetadata();
   };
 
   /**
@@ -257,6 +257,7 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
         stepDependencies: tags.prevBlockNames || [],
         limits: tags.limits || {},
         baseImage: tags.baseImage,
+        enableCaching: tags.enableCaching,
       };
 
       const cellElement = this.props.notebook.content.widgets[index]
@@ -270,8 +271,16 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
       }
 
       const metadataParent = document.createElement('div');
-      cellElement.prepend(metadataParent);
-
+      // When the cell was newly added Jupyter still didn't add elements to it
+      // so we wait for the first child to be added and then we prepend the metadata element.
+      if (cellElement.childNodes.length === 0) {
+        new MutationObserver((_, obs) => {
+          cellElement.prepend(metadataParent);
+          obs.disconnect();
+        }).observe(cellElement, { childList: true });
+      } else {
+        cellElement.prepend(metadataParent);
+      }
       const inlineMetadataPortal = createPortal(
         <InlineMetadata
           key={index}
@@ -280,6 +289,7 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
           stepDependencies={tags.prevBlockNames}
           limits={tags.limits || {}}
           baseImage={tags.baseImage}
+          enableCaching={tags.enableCaching}
           previousBlockName={previousBlockName}
           cellIndex={index}
           pipelineBaseImage={this.props.pipelineBaseImage}
@@ -335,6 +345,7 @@ export class InlineCellsMetadata extends React.Component<IProps, IState> {
         stepDependencies={editorProps.stepDependencies}
         limits={editorProps.limits}
         baseImage={editorProps.baseImage}
+        enableCaching={editorProps.enableCaching}
         pipelineBaseImage={this.props.pipelineBaseImage}
         defaultBaseImage={this.props.defaultBaseImage}
       />,

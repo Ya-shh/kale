@@ -12,6 +12,9 @@
     "url": "https://github.com/kubeflow-kale/kale/issues"
   },
   "license": "Apache-2.0",
+  "engines": {
+  "node": ">=22"
+  },
   "author": {
     "name": "Stefano Fioravanzo",
     "email": "stefano.fioravanzo@gmail.com"
@@ -118,7 +121,8 @@
       }
     },
     "extension": true,
-    "outputDir": "kubeflow_kale_labextension/labextension"
+    "outputDir": "kubeflow_kale_labextension/labextension",
+    "webpackConfig": "webpack.config.js"
   },
   "stylelint": {
     "extends": [

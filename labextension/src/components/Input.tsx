@@ -219,10 +219,21 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
 
   const [localValue, setLocalValue] = React.useState(String(propsValue));
   const [beforeUpdateError, setBeforeUpdateError] = React.useState(false);
+  const debounceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   React.useEffect(() => {
     setLocalValue(String(propsValue));
   }, [propsValue]);
+
+  React.useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   const getRegex = (): string | RegExp | undefined => {
     if (regex) {
@@ -257,6 +268,15 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
       : false;
   const error = regexError || beforeUpdateError;
 
+  const debouncedUpdateValue = (newValue: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      updateValue(newValue, inputIndex || 0);
+    }, 500);
+  };
+
   const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = evt.target.value;
     setLocalValue(newValue);
@@ -265,10 +285,10 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
         setBeforeUpdateError(true);
       } else {
         setBeforeUpdateError(false);
-        updateValue(newValue, inputIndex || 0);
+        debouncedUpdateValue(newValue);
       }
     } else {
-      updateValue(newValue, inputIndex || 0);
+      debouncedUpdateValue(newValue);
     }
   };
 

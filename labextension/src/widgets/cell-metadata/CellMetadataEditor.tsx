@@ -307,7 +307,7 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
       this.props.notebook,
       this.context.activeCellIndex,
       currentCellMetadata,
-      false,
+      true,
     ).then(() => {
       TagsUtils.updateKaleCellsTags(this.props.notebook, oldBlockName, value);
     });
@@ -637,7 +637,7 @@ export class CellMetadataEditor extends React.Component<IProps, IState> {
 
               <IconButton
                 aria-label="delete"
-                onClick={() => this.closeEditor()}
+                onMouseDown={() => this.closeEditor()}
               >
                 <CloseIcon fontSize="small" />
               </IconButton>

@@ -198,6 +198,7 @@ export interface IInputProps extends Omit<
   variant?: 'standard' | 'outlined' | 'filled';
   updateValue: (value: string, index: number) => void;
   onBeforeUpdate?: (value: string) => boolean;
+  updateOnError?: boolean;
 }
 
 export const Input: React.FunctionComponent<IInputProps> = props => {
@@ -214,26 +215,16 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
     variant = 'outlined',
     updateValue,
     onBeforeUpdate,
+    updateOnError = false,
     ...rest
   } = props;
 
   const [localValue, setLocalValue] = React.useState(String(propsValue));
   const [beforeUpdateError, setBeforeUpdateError] = React.useState(false);
-  const debounceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
 
   React.useEffect(() => {
     setLocalValue(String(propsValue));
   }, [propsValue]);
-
-  React.useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
 
   const getRegex = (): string | RegExp | undefined => {
     if (regex) {
@@ -268,27 +259,24 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
       : false;
   const error = regexError || beforeUpdateError;
 
-  const debouncedUpdateValue = (newValue: string) => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      updateValue(newValue, inputIndex || 0);
-    }, 500);
-  };
-
   const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = evt.target.value;
     setLocalValue(newValue);
+    if (updateOnError) {
+      updateValue(newValue, inputIndex || 0);
+    }
     if (onBeforeUpdate) {
       if (onBeforeUpdate(newValue)) {
         setBeforeUpdateError(true);
       } else {
         setBeforeUpdateError(false);
-        debouncedUpdateValue(newValue);
       }
-    } else {
-      debouncedUpdateValue(newValue);
+    }
+  };
+
+  const handleBlur = () => {
+    if (!updateOnError && !error && localValue !== String(propsValue)) {
+      updateValue(localValue, inputIndex || 0);
     }
   };
 
@@ -312,6 +300,7 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
         },
       }}
       onChange={handleChange}
+      onBlur={handleBlur}
     />
   );
 };

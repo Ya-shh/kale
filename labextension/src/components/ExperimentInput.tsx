@@ -143,6 +143,7 @@ export const ExperimentInput: React.FunctionComponent<
             regexErrorMsg={regexErrorMsg}
             variant="standard"
             inputIndex={0}
+            updateOnError
           />
         </div>
       )}

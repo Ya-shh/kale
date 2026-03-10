@@ -193,20 +193,22 @@ export default class TagsUtils {
     notebookPanel: NotebookPanel,
     oldBlockName: string,
     newBlockName: string,
+    save: boolean = true,
   ) {
-    let i: number;
+    const prevTag = 'prev:' + oldBlockName;
+    let hasChanges = false;
     const allPromises = [];
-    for (i = 0; i < notebookPanel.model!.cells.length; i++) {
-      const tags: string[] = CellUtils.getCellMetaData(
-        notebookPanel.content,
-        i,
-        'tags',
-      ) || [];
+    for (let i = 0; i < notebookPanel.model!.cells.length; i++) {
+      const tags: string[] =
+        CellUtils.getCellMetaData(notebookPanel.content, i, 'tags') || [];
+      if (!tags.includes(prevTag)) {
+        continue;
+      }
       // If there is a prev tag that points to the old name, update it with the
       // new one.
-      const newTags: string[] = (tags || [])
+      const newTags: string[] = tags
         .map(t => {
-          if (t === 'prev:' + oldBlockName) {
+          if (t === prevTag) {
             return RESERVED_CELL_NAMES.includes(newBlockName)
               ? ''
               : 'prev:' + newBlockName;
@@ -215,13 +217,16 @@ export default class TagsUtils {
           }
         })
         .filter(t => t !== '' && t !== 'prev:');
+      hasChanges = true;
       allPromises.push(
         CellUtils.setCellMetaData(notebookPanel, i, 'tags', newTags, false),
       );
     }
-    Promise.all(allPromises).then(() => {
-      notebookPanel.context.save();
-    });
+    if (hasChanges && save) {
+      Promise.all(allPromises).then(() => {
+        notebookPanel.context.save();
+      });
+    }
   }
 
   /**

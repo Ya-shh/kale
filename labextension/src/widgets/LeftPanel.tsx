@@ -36,6 +36,8 @@ import { KFPStatusBadge, KfpStatus } from '../components/KFPStatusBadge';
 import { executeRpc } from '../lib/RPCUtils';
 import kaleLogo from '../../style/icons/kale.svg';
 
+export type DeployType = 'compile' | 'run' | 'upload';
+
 const KFP_STATUS_REFRESH_MS = 30_000;
 
 const KALE_NOTEBOOK_METADATA_KEY = 'kubeflow_notebook';
@@ -62,7 +64,7 @@ interface IProps {
 interface IState {
   metadata: IKaleNotebookMetadata;
   runDeployment: boolean;
-  deploymentType: string;
+  deploymentType: DeployType;
   deployDebugMessage: boolean;
   experiments: IExperiment[];
   gettingExperiments: boolean;
@@ -200,12 +202,23 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
       metadata: { ...prevState.metadata, enable_caching: enabled },
     }));
 
-  activateRunDeployState = (type: string) => {
+  activateRunDeployState = (type: DeployType) => {
     if (!this.state.runDeployment) {
       // Clear all previous deploys when starting a new one, so only the latest panel is shown
       this.setState({ runDeployment: true, deploymentType: type, deploys: {} });
       this.runDeploymentCommand();
     }
+  };
+
+  public triggerCompile = () => {
+    this.activateRunDeployState('compile');
+  };
+
+  public isKaleEnabled = (): boolean => {
+    return this.state.isEnabled;
+  };
+  public triggerRun = () => {
+    this.activateRunDeployState('run');
   };
 
   changeDeployDebugMessage = () =>

@@ -29,7 +29,7 @@ export const KFPStatusBadge: React.FunctionComponent<IProps> = ({ status }) => {
     case 'connected':
       label = (
         <span className="kfp-status-text kfp-status-text-connected">
-          Operational ✅
+          Connected ✅
         </span>
       );
       description = 'KFP is reachable. You can compile and run pipelines.';
@@ -37,7 +37,7 @@ export const KFPStatusBadge: React.FunctionComponent<IProps> = ({ status }) => {
     case 'disconnected':
       label = (
         <span className="kfp-status-text kfp-status-text-disconnected">
-          Partial Outage ⚠️
+          Disconnected ⚠️
         </span>
       );
       description =

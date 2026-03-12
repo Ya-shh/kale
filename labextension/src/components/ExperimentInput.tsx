@@ -106,13 +106,13 @@ export const ExperimentInput: React.FunctionComponent<
     return filtered.length === 0 ? '' : filtered[0].name;
   };
 
-  const updateSelected = (selected: string, _index?: number) => {
+  const updateSelected = (selected: string, index?: number) => {
     const value = selected === NEW_EXPERIMENT.id ? '' : getName(selected);
     const experiment: IExperiment = { id: selected, name: value };
     props.updateValue(experiment);
   };
 
-  const updateValue = (value: string, _index?: number) => {
+  const updateValue = (value: string, index?: number) => {
     const experiment: IExperiment = { name: value, id: NEW_EXPERIMENT.id };
     props.updateValue(experiment);
   };

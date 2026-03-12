@@ -165,7 +165,7 @@
 //     />
 //   );
 // };
-import * as React from 'react';
+import React, { useState, useEffect } from 'react';
 import TextField, { TextFieldProps } from '@mui/material/TextField';
 import { styled } from '@mui/material/styles';
 
@@ -219,10 +219,10 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
     ...rest
   } = props;
 
-  const [localValue, setLocalValue] = React.useState(String(propsValue));
-  const [beforeUpdateError, setBeforeUpdateError] = React.useState(false);
+  const [localValue, setLocalValue] = useState(String(propsValue));
+  const [beforeUpdateError, setBeforeUpdateError] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setLocalValue(String(propsValue));
   }, [propsValue]);
 
@@ -266,7 +266,8 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
       updateValue(newValue, inputIndex || 0);
     }
     if (onBeforeUpdate) {
-      if (onBeforeUpdate(newValue)) {
+      const hasError = onBeforeUpdate(newValue);
+      if (hasError) {
         setBeforeUpdateError(true);
       } else {
         setBeforeUpdateError(false);

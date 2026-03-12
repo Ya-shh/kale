@@ -502,14 +502,14 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
     });
 
     // CREATE PIPELINE
-    const compileNotebook = await commands.compilePipeline(
+    const compileResult = await commands.compilePipeline(
       nbFilePath,
       metadata,
       this.props.docManager,
       this.state.deployDebugMessage,
       _updateDeployProgress,
     );
-    if (!compileNotebook) {
+    if (!compileResult.success) {
       this.setState({ runDeployment: false });
       return;
     }
@@ -522,8 +522,8 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
       this.state.deploymentType === 'upload' ||
       this.state.deploymentType === 'run'
         ? await commands.uploadPipeline(
-            compileNotebook.pipeline_package_path,
-            compileNotebook.pipeline_metadata,
+            compileResult.pipeline_package_path,
+            compileResult.pipeline_metadata,
             _updateDeployProgress,
           )
         : null;
@@ -548,8 +548,8 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
       const runPipeline = await commands.runPipeline(
         uploadPipeline.pipeline.pipelineid,
         uploadPipeline.pipeline.versionid,
-        compileNotebook.pipeline_metadata,
-        compileNotebook.pipeline_package_path,
+        compileResult.pipeline_metadata,
+        compileResult.pipeline_package_path,
         _updateDeployProgress,
       );
       if (runPipeline) {

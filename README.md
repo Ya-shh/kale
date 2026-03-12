@@ -8,8 +8,8 @@
 <a target="_blank" href="https://pypi.org/project/kubeflow-kale/">
     <img alt="PyPI Version" src="https://badgen.net/pypi/v/kubeflow-kale">
 </a>
-<a target="_blank" href="https://www.npmjs.com/package/kubeflow-kale-labextension">
-  <img alt="npm Version" src="https://badgen.net/npm/v/kubeflow-kale-labextension">
+<a target="_blank" href="https://www.npmjs.com/package/jupyterlab-kubeflow-kale">
+  <img alt="npm Version" src="https://badgen.net/npm/v/jupyterlab-kubeflow-kale">
 </a>
 <a target="_blank" href="https://github.com/kubeflow/kale/actions">
   <img alt="Kale CI Workflow Status" src="https://github.com/kubeflow/kale/workflows/CI/badge.svg">
@@ -77,7 +77,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed setup instructions.
 Once v2.0 is released, you'll be able to install from PyPI:
 
 ```bash
-pip install "jupyterlab>=4.0.0" kubeflow-kale kubeflow-kale-labextension
+pip install "jupyterlab>=4.0.0" kubeflow-kale[jupyter]
 jupyter lab
 ```
 
@@ -143,7 +143,7 @@ Kale uses special cell types (tags) to organize your notebook into pipeline comp
 | **Imports** | ✅ Works | The code in this cell will be pre-pended to every step of the pipeline. Used for all import statements. **All imports must be placed in cells tagged as `imports`.** Importing libraries (pandas, tensorflow, etc.) in other cell types will cause pipeline execution errors. |
 | **Functions** | ✅ Works |The code in this cell will be pre-pended to every step of the pipeline, after **imports**. Used for function and class definitions only.  **Do not include** top-level executable statements |
 | **Pipeline Parameters** | ✅ Works | Define variables that will become pipeline parameters. If more than one Pipeline Parameters cell exists, and a parameter is defined in each cell, only the final value will be taken.|
-| **Pipeline Metrics** | ⚠️ Known Issue | Intended for defining pipeline metrics, but currently not working. |
+| **Pipeline Metrics** | ✅ Works | Print scalar metrics and transform it into pipeline metrics. |
 | **Step** | ✅ Works | Regular pipeline steps with custom names. This is the default cell type for your data processing and ML logic. Each step can have dependencies on other steps. Steps can also define their own image and GPU requirements. |
 | **Skip Cell** | ✅ Works | Cells marked as skip will be excluded from the pipeline. Useful for exploratory code or debugging that shouldn't be part of the production pipeline. |
 

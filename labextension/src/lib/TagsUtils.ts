@@ -149,8 +149,7 @@ export default class TagsUtils {
   public static setKaleCellTags(
     notebookPanel: NotebookPanel,
     index: number,
-    metadata: IKaleCellTags,
-    save: boolean,
+    metadata: IKaleCellTags
   ): Promise<any> {
     // make the dict to save to tags
     let nb = metadata.blockName;
@@ -177,7 +176,7 @@ export default class TagsUtils {
       tags.push(CACHE_TAG + (metadata.enableCaching ? 'enabled' : 'disabled'));
     }
 
-    return CellUtils.setCellMetaData(notebookPanel, index, 'tags', tags, save);
+    return CellUtils.setCellMetaData(notebookPanel, index, 'tags', tags);
   }
 
   /**
@@ -193,22 +192,20 @@ export default class TagsUtils {
     notebookPanel: NotebookPanel,
     oldBlockName: string,
     newBlockName: string,
-    save: boolean = true,
   ) {
-    const prevTag = 'prev:' + oldBlockName;
-    let hasChanges = false;
+    let i: number;
     const allPromises = [];
-    for (let i = 0; i < notebookPanel.model!.cells.length; i++) {
-      const tags: string[] =
-        CellUtils.getCellMetaData(notebookPanel.content, i, 'tags') || [];
-      if (!tags.includes(prevTag)) {
-        continue;
-      }
+    for (i = 0; i < notebookPanel.model!.cells.length; i++) {
+      const tags: string[] = CellUtils.getCellMetaData(
+        notebookPanel.content,
+        i,
+        'tags',
+      ) || [];
       // If there is a prev tag that points to the old name, update it with the
       // new one.
-      const newTags: string[] = tags
+      const newTags: string[] = (tags || [])
         .map(t => {
-          if (t === prevTag) {
+          if (t === 'prev:' + oldBlockName) {
             return RESERVED_CELL_NAMES.includes(newBlockName)
               ? ''
               : 'prev:' + newBlockName;
@@ -217,16 +214,11 @@ export default class TagsUtils {
           }
         })
         .filter(t => t !== '' && t !== 'prev:');
-      hasChanges = true;
       allPromises.push(
-        CellUtils.setCellMetaData(notebookPanel, i, 'tags', newTags, false),
+        CellUtils.setCellMetaData(notebookPanel, i, 'tags', newTags),
       );
     }
-    if (hasChanges && save) {
-      Promise.all(allPromises).then(() => {
-        notebookPanel.context.save();
-      });
-    }
+    Promise.all(allPromises);
   }
 
   /**
@@ -252,8 +244,7 @@ export default class TagsUtils {
     TagsUtils.setKaleCellTags(
       notebook,
       activeCellIndex,
-      cellMetadata,
-      false,
+      cellMetadata
     ).then(oldValue => {
       TagsUtils.updateKaleCellsTags(notebook, oldBlockName, value);
     });
@@ -298,10 +289,9 @@ export default class TagsUtils {
           prevBlockNames: newPrevBlockNames,
         };
 
-        this.setKaleCellTags(notebook, index, updatedMetadata, false);
+        this.setKaleCellTags(notebook, index, updatedMetadata);
       }
     }
 
-    notebook.context.save();
   }
 }

@@ -165,7 +165,7 @@
 //     />
 //   );
 // };
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import TextField, { TextFieldProps } from '@mui/material/TextField';
 import { styled } from '@mui/material/styles';
 
@@ -198,7 +198,6 @@ export interface IInputProps extends Omit<
   variant?: 'standard' | 'outlined' | 'filled';
   updateValue: (value: string, index: number) => void;
   onBeforeUpdate?: (value: string) => boolean;
-  updateOnError?: boolean;
 }
 
 export const Input: React.FunctionComponent<IInputProps> = props => {
@@ -215,16 +214,10 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
     variant = 'outlined',
     updateValue,
     onBeforeUpdate,
-    updateOnError = false,
     ...rest
   } = props;
 
-  const [localValue, setLocalValue] = useState(String(propsValue));
   const [beforeUpdateError, setBeforeUpdateError] = useState(false);
-
-  useEffect(() => {
-    setLocalValue(String(propsValue));
-  }, [propsValue]);
 
   const getRegex = (): string | RegExp | undefined => {
     if (regex) {
@@ -252,33 +245,21 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
     return undefined;
   };
 
+  const value = String(propsValue);
   const regexPattern = getRegex();
   const regexError =
-    regexPattern !== undefined && localValue !== ''
-      ? !new RegExp(regexPattern).test(localValue)
+    regexPattern !== undefined && value !== ''
+      ? !new RegExp(regexPattern).test(value)
       : false;
   const error = regexError || beforeUpdateError;
 
   const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = evt.target.value;
-    setLocalValue(newValue);
-    if (updateOnError) {
-      updateValue(newValue, inputIndex || 0);
-    }
     if (onBeforeUpdate) {
       const hasError = onBeforeUpdate(newValue);
-      if (hasError) {
-        setBeforeUpdateError(true);
-      } else {
-        setBeforeUpdateError(false);
-      }
+      setBeforeUpdateError(hasError);
     }
-  };
-
-  const handleBlur = () => {
-    if (!updateOnError && !error && localValue !== String(propsValue)) {
-      updateValue(localValue, inputIndex || 0);
-    }
+    updateValue(newValue, inputIndex || 0);
   };
 
   return (
@@ -287,7 +268,7 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
       variant={variant}
       className={className}
       error={error}
-      value={localValue}
+      value={value}
       margin="dense"
       placeholder={placeholder}
       spellCheck={false}
@@ -297,11 +278,10 @@ export const Input: React.FunctionComponent<IInputProps> = props => {
           readOnly: readOnly,
         },
         inputLabel: {
-          shrink: !!placeholder || localValue !== '',
+          shrink: !!placeholder || value !== '',
         },
       }}
       onChange={handleChange}
-      onBlur={handleBlur}
     />
   );
 };

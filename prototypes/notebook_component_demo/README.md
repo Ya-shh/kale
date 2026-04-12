@@ -22,10 +22,28 @@ This is the exact shape the workflow compiler will produce for a
 
 ## Run
 
+### Compile (produces notebook_workflow.yaml)
+
 ```bash
 ../../.venv/bin/python notebook_component_demo.py
 # Compiled: notebook_workflow.yaml
 ```
+
+### Submit to a local Kubeflow cluster
+
+```bash
+# Terminal 1: port-forward KFP API (bypasses Istio/Dex auth)
+kubectl -n kubeflow port-forward svc/ml-pipeline 8888:8888
+
+# Terminal 2: submit
+../../.venv/bin/python submit.py
+# → run_id: ...
+# → UI URL: http://localhost:8080/_/pipeline/#/runs/details/...
+```
+
+Open the URL in a browser (logged into Kubeflow) to watch the DAG execute.
+First run: 2–5 min per component (image pull + pip install of nbclient,
+ipykernel, jupyter_client). Subsequent runs: under a minute total.
 
 ## Evidence in the compiled YAML
 

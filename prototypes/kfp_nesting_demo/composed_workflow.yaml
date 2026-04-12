@@ -1,0 +1,238 @@
+# PIPELINE DEFINITION
+# Name: composed-workflow
+# Outputs:
+#    Output: str
+components:
+  comp-data-prep-subpipeline:
+    dag:
+      outputs:
+        artifacts:
+          Output:
+            artifactSelectors:
+            - outputArtifactKey: out_data
+              producerSubtask: make-dataset
+      tasks:
+        make-dataset:
+          cachingOptions:
+            enableCache: true
+          componentRef:
+            name: comp-make-dataset
+          taskInfo:
+            name: make-dataset
+    outputDefinitions:
+      artifacts:
+        Output:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-evaluate-model:
+    executorLabel: exec-evaluate-model
+    inputDefinitions:
+      artifacts:
+        in_model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-make-dataset:
+    executorLabel: exec-make-dataset
+    outputDefinitions:
+      artifacts:
+        out_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-train-model:
+    executorLabel: exec-train-model
+    inputDefinitions:
+      artifacts:
+        in_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        out_model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+  comp-train-subpipeline:
+    dag:
+      outputs:
+        artifacts:
+          Output:
+            artifactSelectors:
+            - outputArtifactKey: out_model
+              producerSubtask: train-model
+      tasks:
+        train-model:
+          cachingOptions:
+            enableCache: true
+          componentRef:
+            name: comp-train-model
+          inputs:
+            artifacts:
+              in_data:
+                componentInputArtifact: dataset
+          taskInfo:
+            name: train-model
+    inputDefinitions:
+      artifacts:
+        dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        Output:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-evaluate-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - evaluate_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef evaluate_model(in_model: Input[Model]) -> str:\n    with open(in_model.path)\
+          \ as f:\n        return f\"evaluated: {f.read()}\"\n\n"
+        image: python:3.12
+    exec-make-dataset:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - make_dataset
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef make_dataset(out_data: Output[Dataset]) -> None:\n    with open(out_data.path,\
+          \ \"w\") as f:\n        f.write(\"x,y\\n1,2\\n3,4\\n5,6\\n\")\n\n"
+        image: python:3.12
+    exec-train-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef train_model(in_data: Input[Dataset], out_model: Output[Model])\
+          \ -> None:\n    with open(in_data.path) as f:\n        rows = f.read().splitlines()[1:]\n\
+          \    with open(out_model.path, \"w\") as f:\n        f.write(f\"fake-model-trained-on-{len(rows)}-rows\"\
+          )\n\n"
+        image: python:3.12
+pipelineInfo:
+  name: composed-workflow
+root:
+  dag:
+    outputs:
+      parameters:
+        Output:
+          valueFromParameter:
+            outputParameterKey: Output
+            producerSubtask: evaluate-model
+    tasks:
+      data-prep-subpipeline:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-data-prep-subpipeline
+        taskInfo:
+          name: data-prep-subpipeline
+      evaluate-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-evaluate-model
+        dependentTasks:
+        - train-subpipeline
+        inputs:
+          artifacts:
+            in_model:
+              taskOutputArtifact:
+                outputArtifactKey: Output
+                producerTask: train-subpipeline
+        taskInfo:
+          name: evaluate-model
+      train-subpipeline:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-subpipeline
+        dependentTasks:
+        - data-prep-subpipeline
+        inputs:
+          artifacts:
+            dataset:
+              taskOutputArtifact:
+                outputArtifactKey: Output
+                producerTask: data-prep-subpipeline
+        taskInfo:
+          name: train-subpipeline
+  outputDefinitions:
+    parameters:
+      Output:
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.15.2

@@ -1,0 +1,43 @@
+{
+  "name": "minimal-workflow-widget",
+  "version": "0.1.0",
+  "description": "Minimal DocumentWidget + React Flow prototype for Composable Kale Notebooks.",
+  "private": true,
+  "keywords": [
+    "jupyter",
+    "jupyterlab",
+    "jupyterlab-extension"
+  ],
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib/**/*.{d.ts,js,js.map}",
+    "style/**/*.{css}"
+  ],
+  "scripts": {
+    "build": "jlpm run build:lib && jlpm run build:labextension:dev",
+    "build:lib": "tsc",
+    "build:labextension:dev": "jupyter labextension build --development True .",
+    "clean": "rimraf lib tsconfig.tsbuildinfo",
+    "install:extension": "jlpm run build"
+  },
+  "dependencies": {
+    "@jupyterlab/application": "^4.0.0",
+    "@jupyterlab/apputils": "^4.0.0",
+    "@jupyterlab/docregistry": "^4.0.0",
+    "@lumino/coreutils": "^2.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "reactflow": "^11.10.0"
+  },
+  "devDependencies": {
+    "@jupyterlab/builder": "^4.0.0",
+    "@types/react": "^18.2.0",
+    "rimraf": "^5.0.0",
+    "typescript": "~5.1.0"
+  },
+  "jupyterlab": {
+    "extension": true,
+    "outputDir": "minimal_workflow_widget/labextension"
+  }
+}

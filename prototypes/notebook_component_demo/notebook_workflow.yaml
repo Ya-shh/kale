@@ -1,0 +1,385 @@
+# PIPELINE DEFINITION
+# Name: composable-notebook-workflow
+# Inputs:
+#    epochs: int [Default: 10.0]
+#    learning_rate: float [Default: 0.001]
+#    n_rows: int [Default: 100.0]
+components:
+  comp-data-prep-component:
+    executorLabel: exec-data-prep-component
+    inputDefinitions:
+      parameters:
+        n_rows:
+          parameterType: NUMBER_INTEGER
+    outputDefinitions:
+      artifacts:
+        out_dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-train-component:
+    executorLabel: exec-train-component
+    inputDefinitions:
+      artifacts:
+        in_dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        epochs:
+          parameterType: NUMBER_INTEGER
+        learning_rate:
+          parameterType: NUMBER_DOUBLE
+    outputDefinitions:
+      artifacts:
+        out_model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-data-prep-component:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - data_prep_component
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'nbclient>=0.10,<1'\
+          \ 'ipykernel>=6,<7' 'jupyter_client>=7,<9'  &&  python3 -m pip install --quiet\
+          \ --no-warn-script-location 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5;\
+          \ python_version<\"3.9\"' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\n__KFP_EMBEDDED_ARCHIVE_B64 = 'H4sIAD2/22kC/+2VS2/bMAzHc86nIHRx0gWOH3mtQIAdd+y9DQzVkRNhtiRIcu0gyHefbHVLlrXAMKAd0PF3sC2SIv96EA6n4fTLHW2/MrplevAmRJ7X3lGUzs7fnT2OkjgZQDt4B2pjqXblB/8nyQoqyyu2jpfLRRStPq+iME3SKJknwwHy4dlSSzOlmQq5OojHN+v/xcz3+HIx972e/Oz5eO6a3T0Wi2W6nHX2eJa6MIjes/8P1OzNXvMnal6Mc2FF8fHO/zgEkrOyNOQW7ocAbgzektmDYs5KcrllZNLbK2Zpd2Oc+QjE0l0/jSiqqXMxbcgGTj7UyFrn7DmrG4tMy8bAGuIoehA+HxBZW1XbTFG7d64HMrWVmnYVDLNhbp4eCOkCNz4na1leWy5FlstaWJdc1GXpfT5Tr2fjDL2KP1/MK6J5paS24IRMQFOxldVZesOdZqmYGF0sYgJBE0xAsKbkgq2DYAzUQHF7ntY9GrdWlzNsNHebNirGV+5nh2xG90Hr0gWHYHMVU0gNGXDRydqxkd/d8VWdjtbV8tJD/xqNfw+6rNhOILlp4RNEYXxzNfNShdJc2FERNFpaBkev4AT9KVsJx4tdOQXjvz3GYT/pl7NyZvKNacFKo1jur6Jw9687XnWweylSMgGy5UaV9JD9cN31LkiJvxukdBtX0x3LuCjkS1lIV72LJeLRbXdFO6Wzy3FWcSG1s86HJ/xbIgiCIAiCIAiCIAiCIAiCIAiCIAiCIP+Q7x+7owUAKAAA'\n\
+          __KFP_NOTEBOOK_REL_PATH = 'data_prep.ipynb'\n\nimport base64 as __kfp_b64\n\
+          import gzip as __kfp_gzip\nimport io as __kfp_io\nimport os as __kfp_os\n\
+          import sys as __kfp_sys\nimport tarfile as __kfp_tarfile\nimport tempfile\
+          \ as __kfp_tempfile\nfrom nbclient import NotebookClient\n\n# Extract embedded\
+          \ archive at import time to ensure sys.path and globals are set\nprint('[KFP]\
+          \ Extracting embedded notebook archive...', flush=True)\n__kfp_tmpdir =\
+          \ __kfp_tempfile.TemporaryDirectory()\n__KFP_EMBEDDED_ASSET_DIR = __kfp_tmpdir.name\n\
+          try:\n    __kfp_bytes = __kfp_b64.b64decode(__KFP_EMBEDDED_ARCHIVE_B64.encode('ascii'))\n\
+          \    with __kfp_tarfile.open(fileobj=__kfp_io.BytesIO(__kfp_bytes), mode='r:gz')\
+          \ as __kfp_tar:\n        __kfp_tar.extractall(path=__KFP_EMBEDDED_ASSET_DIR)\n\
+          \    print(f'[KFP] Notebook archive extracted to: {__KFP_EMBEDDED_ASSET_DIR}',\
+          \ flush=True)\nexcept Exception as __kfp_e:\n    raise RuntimeError(f'Failed\
+          \ to extract embedded notebook archive: {__kfp_e}')\n\n# Always prepend\
+          \ the extracted directory to sys.path for import resolution\nif __KFP_EMBEDDED_ASSET_DIR\
+          \ not in __kfp_sys.path:\n    __kfp_sys.path.insert(0, __KFP_EMBEDDED_ASSET_DIR)\n\
+          \    print(f'[KFP] Added notebook archive directory to Python path', flush=True)\n\
+          \n# Optional convenience for generic embedded file variable name\n__KFP_EMBEDDED_ASSET_FILE\
+          \ = __kfp_os.path.join(__KFP_EMBEDDED_ASSET_DIR, __KFP_NOTEBOOK_REL_PATH)\n\
+          \n\nclass KFPStreamingNotebookClient(NotebookClient):\n    # Streams outputs\
+          \ in real-time by emitting outputs during message processing.\n    def process_message(self,\
+          \ msg, cell, cell_index):\n        # Call the parent implementation to handle\
+          \ the message normally\n        output = super().process_message(msg, cell,\
+          \ cell_index)\n\n        # If an output was created, stream it immediately\n\
+          \        if output is not None:\n            _kfp_stream_single_output(output,\
+          \ cell_index)\n\n        return output\n\ndef __kfp_write_parameters_cell(nb,\
+          \ params):\n    \"\"\"Inject parameters following Papermill semantics.\n\
+          \n    - If a cell tagged with 'parameters' exists, insert an overriding\n\
+          \      'injected-parameters' cell immediately after it.\n    - Otherwise,\
+          \ insert the 'injected-parameters' cell at the top.\n    \"\"\"\n    import\
+          \ json\n\n    import nbformat\n\n    if not params:\n        return\n\n\
+          \    # Build the injected parameters cell\n    assignments = []\n    for\
+          \ key, value in params.items():\n        serialized = json.dumps(value)\n\
+          \        assignments.append(key + ' = json.loads(' + repr(serialized) +\
+          \ ')')\n    source = 'import json\\n' + '\\n'.join(assignments) + '\\n'\n\
+          \    cell = nbformat.v4.new_code_cell(source=source)\n    cell.metadata.setdefault('tags',\
+          \ [])\n    if 'injected-parameters' not in cell.metadata['tags']:\n    \
+          \    cell.metadata['tags'].append('injected-parameters')\n\n    # Locate\
+          \ the first 'parameters' tagged cell\n    insert_idx = 0\n    for idx, existing\
+          \ in enumerate(nb.get('cells', [])):\n        if existing.get('cell_type')\
+          \ != 'code':\n            continue\n        tags = existing.get('metadata',\
+          \ {}).get('tags', []) or []\n        if 'parameters' in tags:\n        \
+          \    insert_idx = idx + 1\n            break\n\n    nb.cells.insert(insert_idx,\
+          \ cell)\n\ndef _kfp_stream_single_output(output, cell_idx):\n    \"\"\"\
+          Stream a single notebook output immediately during execution.\n\n    Prints\
+          \ stdout/stderr and text/plain display outputs to the console\n    so users\
+          \ see cell output as it happens (no need to wait until the\n    notebook\
+          \ finishes).\n    \"\"\"\n    import sys\n    output_type = output.get('output_type')\n\
+          \n    if output_type == 'stream':\n        text = output.get('text', '')\n\
+          \        if text:\n            try:\n                print(f'[nb cell {cell_idx}\
+          \ stream] ', end='', flush=False)\n            except Exception:\n     \
+          \           pass\n            print(text, end='' if text.endswith('\\n')\
+          \ else '\\n', flush=True)\n    elif output_type == 'error':\n        for\
+          \ line in output.get('traceback', []):\n            print(line, file=sys.stderr,\
+          \ flush=True)\n    else:\n        # Handle display_data and execute_result\n\
+          \        data = output.get('data', {})\n        if 'text/plain' in data:\n\
+          \            print(data['text/plain'], flush=True)\n        elif 'application/json'\
+          \ in data:\n            try:\n                import json as __kfp_json\n\
+          \                parsed = data['application/json']\n                # Some\
+          \ kernels send JSON as string; try to parse if needed\n                if\
+          \ isinstance(parsed, str):\n                    try:\n                 \
+          \       parsed = __kfp_json.loads(parsed)\n                    except Exception:\n\
+          \                        pass\n                print(\n                \
+          \    __kfp_json.dumps(parsed, indent=2, ensure_ascii=False),\n         \
+          \           flush=True)\n            except Exception:\n               \
+          \ # Fallback to raw\n                print(str(data.get('application/json')),\
+          \ flush=True)\n        elif 'text/markdown' in data:\n            # Print\
+          \ markdown as-is; frontends may render, logs will show raw markdown\n  \
+          \          print(data['text/markdown'], flush=True)\n\ndef kfp_run_notebook(**kwargs):\n\
+          \    \"\"\"Execute the embedded notebook with injected parameters.\n\n \
+          \   Parameters provided via kwargs are injected into the notebook\n    following\
+          \ Papermill semantics (after a parameters cell if present,\n    otherwise\
+          \ at top). Execution uses a Python kernel; nbclient and\n    ipykernel must\
+          \ be available at runtime (installed via\n    packages_to_install for notebook\
+          \ components).\n    \"\"\"\n    import os\n    import subprocess\n    import\
+          \ sys\n\n    from nbclient import NotebookClient\n    import nbformat\n\n\
+          \    # Ensure a usable 'python3' kernel is present; install kernelspec if\
+          \ missing\n    print('[KFP Notebook] Checking for Python kernel...', flush=True)\n\
+          \    try:\n        from jupyter_client.kernelspec import KernelSpecManager\
+          \  # type: ignore\n        ksm = KernelSpecManager()\n        have_py3 =\
+          \ 'python3' in ksm.find_kernel_specs()\n        if not have_py3:\n     \
+          \       print(\n                '[KFP Notebook] Python3 kernel not found,\
+          \ installing...',\n                flush=True)\n            try:\n     \
+          \           subprocess.run([\n                    sys.executable, '-m',\
+          \ 'ipykernel', 'install', '--user',\n                    '--name', 'python3',\
+          \ '--display-name', 'Python 3'\n                ],\n                   \
+          \            check=True,\n                               stdout=subprocess.DEVNULL,\n\
+          \                               stderr=subprocess.DEVNULL)\n           \
+          \     print(\n                    '[KFP Notebook] Python3 kernel installed\
+          \ successfully',\n                    flush=True)\n            except subprocess.CalledProcessError\
+          \ as e:\n                raise RuntimeError(\n                    \"Failed\
+          \ to install 'python3' kernelspec for ipykernel. \"\n                  \
+          \  'Ensure ipykernel is available in the environment or include it via packages_to_install.\
+          \ '\n                    f'Error: {e}') from e\n        else:\n        \
+          \    print('[KFP Notebook] Python3 kernel found', flush=True)\n    except\
+          \ ImportError as e:\n        raise RuntimeError(\n            \"jupyter_client\
+          \ is not available. Ensure it's installed in the environment or include\
+          \ it via packages_to_install. \"\n            f'Error: {e}') from e\n\n\
+          \    nb_path = os.path.join(__KFP_EMBEDDED_ASSET_DIR, __KFP_NOTEBOOK_REL_PATH)\n\
+          \n    try:\n        nb = nbformat.read(nb_path, as_version=4)\n    except\
+          \ Exception as e:\n        raise RuntimeError(\n            f'Failed to\
+          \ read notebook {nb_path}. Ensure it is a valid Jupyter notebook. Error:\
+          \ {e}'\n        ) from e\n\n    try:\n        __kfp_write_parameters_cell(nb,\
+          \ kwargs)\n        print(\n            f'[KFP Notebook] Executing notebook\
+          \ with {len(nb.get(\"cells\", []))} cells',\n            flush=True)\n\n\
+          \        # Use our custom streaming client for real-time output (defined\
+          \ in the\n        # generated ephemeral source)\n        client = KFPStreamingNotebookClient(\n\
+          \            nb,\n            timeout=None,\n            allow_errors=False,\n\
+          \            store_widget_state=False,\n            kernel_name='python3')\n\
+          \        client.execute(cwd=__KFP_EMBEDDED_ASSET_DIR)\n\n        print('[KFP\
+          \ Notebook] Execution complete', flush=True)\n\n    except Exception as\
+          \ e:\n        raise RuntimeError(f'Notebook execution failed. Error: {e}')\
+          \ from e\n\n\n# Bind helper into dsl namespace so user code can call dsl.run_notebook(...)\n\
+          dsl.run_notebook = kfp_run_notebook\n\n\ndef data_prep_component(\n    n_rows:\
+          \ int,\n    out_dataset: Output[Dataset],\n) -> None:\n    # Papermill-style\
+          \ parameter injection: the notebook's `parameters`-tagged\n    # cell has\
+          \ n_rows and output_path. We override both; output_path is\n    # pointed\
+          \ at the KFP-assigned artifact path.\n    dsl.run_notebook(n_rows=n_rows,\
+          \ output_path=out_dataset.path)\n\n"
+        image: python:3.12
+    exec-train-component:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train_component
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'nbclient>=0.10,<1'\
+          \ 'ipykernel>=6,<7' 'jupyter_client>=7,<9'  &&  python3 -m pip install --quiet\
+          \ --no-warn-script-location 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5;\
+          \ python_version<\"3.9\"' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\n__KFP_EMBEDDED_ARCHIVE_B64 = 'H4sIAD2/22kC/+2VwW7iMBCGOfMUI19IJBQSQgJFQtrjHnsvKPIGB6xN7Mh2Cgjx7ms7baG7rbRaqT105ztg8s+MZ+yxk2gSTb7d0+N3RrdMDT6EuOe9MY7T2fW/05N4mkwHcBx8Ap02VNn0g/+T6QIawxu2SubzPI4Xd4u7aJZN82m2GA6QL49RlIuItyfx48NyuEudz/o7Ps+z/q5PX+58kmfpIMmSPJ+n81lq7UmaWQniz7z/J6r3eq/4I9Vv+lm3qvp6/T8PgZSsrjVZwsMQwD5DrxTm1DKrklJuGRl7vWGGbqmhVj4DMXTnw0hLFbUmpjTZwKV31bJTJXua1T67MM1M0VKzhxWsycQ07eRJjUr9uCZr0aexeWzK+jdXr0XmaG4dWSvLvbZOSXwVa0aV4GJXKGqYtcWRPWTE2TZ9bezIys5wKYpSdsLYIkVX171NdqbtjF/Xxgp+NX+/Ke8snjetVAbcKl+qVPLgCq+5NoE1RMp/gQPZMhHcblYYhg/JcnMNFC7KOrkJwqusaxtqTbprgqqW1ATqIdmEUEkFCrgA7w8TaOgxEGNIbmIP3O60z3zd+TGMDqMQqIZqefV0P1V0UNywoBr5nKuzH5bRrLqs16Jvyercj06p1er8qidOHN2kbxUXxk7nX0ZsC1LAWVx8wb7857mgH8fwR95R+K/9HfqgV020MvnJlGC1blnZn3VhD7jre3syeylSMrYnmuu2pqfi2XTvTZCS/tCQmopdR3es4KKSb81CXHbnS8QPu8yGukpnt89Fw4VUVs2GF/wcIwiCIAiCIAiCIAiCIAiCIAiCIAiCIO/zC4cohywAKAAA'\n\
+          __KFP_NOTEBOOK_REL_PATH = 'train.ipynb'\n\nimport base64 as __kfp_b64\n\
+          import gzip as __kfp_gzip\nimport io as __kfp_io\nimport os as __kfp_os\n\
+          import sys as __kfp_sys\nimport tarfile as __kfp_tarfile\nimport tempfile\
+          \ as __kfp_tempfile\nfrom nbclient import NotebookClient\n\n# Extract embedded\
+          \ archive at import time to ensure sys.path and globals are set\nprint('[KFP]\
+          \ Extracting embedded notebook archive...', flush=True)\n__kfp_tmpdir =\
+          \ __kfp_tempfile.TemporaryDirectory()\n__KFP_EMBEDDED_ASSET_DIR = __kfp_tmpdir.name\n\
+          try:\n    __kfp_bytes = __kfp_b64.b64decode(__KFP_EMBEDDED_ARCHIVE_B64.encode('ascii'))\n\
+          \    with __kfp_tarfile.open(fileobj=__kfp_io.BytesIO(__kfp_bytes), mode='r:gz')\
+          \ as __kfp_tar:\n        __kfp_tar.extractall(path=__KFP_EMBEDDED_ASSET_DIR)\n\
+          \    print(f'[KFP] Notebook archive extracted to: {__KFP_EMBEDDED_ASSET_DIR}',\
+          \ flush=True)\nexcept Exception as __kfp_e:\n    raise RuntimeError(f'Failed\
+          \ to extract embedded notebook archive: {__kfp_e}')\n\n# Always prepend\
+          \ the extracted directory to sys.path for import resolution\nif __KFP_EMBEDDED_ASSET_DIR\
+          \ not in __kfp_sys.path:\n    __kfp_sys.path.insert(0, __KFP_EMBEDDED_ASSET_DIR)\n\
+          \    print(f'[KFP] Added notebook archive directory to Python path', flush=True)\n\
+          \n# Optional convenience for generic embedded file variable name\n__KFP_EMBEDDED_ASSET_FILE\
+          \ = __kfp_os.path.join(__KFP_EMBEDDED_ASSET_DIR, __KFP_NOTEBOOK_REL_PATH)\n\
+          \n\nclass KFPStreamingNotebookClient(NotebookClient):\n    # Streams outputs\
+          \ in real-time by emitting outputs during message processing.\n    def process_message(self,\
+          \ msg, cell, cell_index):\n        # Call the parent implementation to handle\
+          \ the message normally\n        output = super().process_message(msg, cell,\
+          \ cell_index)\n\n        # If an output was created, stream it immediately\n\
+          \        if output is not None:\n            _kfp_stream_single_output(output,\
+          \ cell_index)\n\n        return output\n\ndef __kfp_write_parameters_cell(nb,\
+          \ params):\n    \"\"\"Inject parameters following Papermill semantics.\n\
+          \n    - If a cell tagged with 'parameters' exists, insert an overriding\n\
+          \      'injected-parameters' cell immediately after it.\n    - Otherwise,\
+          \ insert the 'injected-parameters' cell at the top.\n    \"\"\"\n    import\
+          \ json\n\n    import nbformat\n\n    if not params:\n        return\n\n\
+          \    # Build the injected parameters cell\n    assignments = []\n    for\
+          \ key, value in params.items():\n        serialized = json.dumps(value)\n\
+          \        assignments.append(key + ' = json.loads(' + repr(serialized) +\
+          \ ')')\n    source = 'import json\\n' + '\\n'.join(assignments) + '\\n'\n\
+          \    cell = nbformat.v4.new_code_cell(source=source)\n    cell.metadata.setdefault('tags',\
+          \ [])\n    if 'injected-parameters' not in cell.metadata['tags']:\n    \
+          \    cell.metadata['tags'].append('injected-parameters')\n\n    # Locate\
+          \ the first 'parameters' tagged cell\n    insert_idx = 0\n    for idx, existing\
+          \ in enumerate(nb.get('cells', [])):\n        if existing.get('cell_type')\
+          \ != 'code':\n            continue\n        tags = existing.get('metadata',\
+          \ {}).get('tags', []) or []\n        if 'parameters' in tags:\n        \
+          \    insert_idx = idx + 1\n            break\n\n    nb.cells.insert(insert_idx,\
+          \ cell)\n\ndef _kfp_stream_single_output(output, cell_idx):\n    \"\"\"\
+          Stream a single notebook output immediately during execution.\n\n    Prints\
+          \ stdout/stderr and text/plain display outputs to the console\n    so users\
+          \ see cell output as it happens (no need to wait until the\n    notebook\
+          \ finishes).\n    \"\"\"\n    import sys\n    output_type = output.get('output_type')\n\
+          \n    if output_type == 'stream':\n        text = output.get('text', '')\n\
+          \        if text:\n            try:\n                print(f'[nb cell {cell_idx}\
+          \ stream] ', end='', flush=False)\n            except Exception:\n     \
+          \           pass\n            print(text, end='' if text.endswith('\\n')\
+          \ else '\\n', flush=True)\n    elif output_type == 'error':\n        for\
+          \ line in output.get('traceback', []):\n            print(line, file=sys.stderr,\
+          \ flush=True)\n    else:\n        # Handle display_data and execute_result\n\
+          \        data = output.get('data', {})\n        if 'text/plain' in data:\n\
+          \            print(data['text/plain'], flush=True)\n        elif 'application/json'\
+          \ in data:\n            try:\n                import json as __kfp_json\n\
+          \                parsed = data['application/json']\n                # Some\
+          \ kernels send JSON as string; try to parse if needed\n                if\
+          \ isinstance(parsed, str):\n                    try:\n                 \
+          \       parsed = __kfp_json.loads(parsed)\n                    except Exception:\n\
+          \                        pass\n                print(\n                \
+          \    __kfp_json.dumps(parsed, indent=2, ensure_ascii=False),\n         \
+          \           flush=True)\n            except Exception:\n               \
+          \ # Fallback to raw\n                print(str(data.get('application/json')),\
+          \ flush=True)\n        elif 'text/markdown' in data:\n            # Print\
+          \ markdown as-is; frontends may render, logs will show raw markdown\n  \
+          \          print(data['text/markdown'], flush=True)\n\ndef kfp_run_notebook(**kwargs):\n\
+          \    \"\"\"Execute the embedded notebook with injected parameters.\n\n \
+          \   Parameters provided via kwargs are injected into the notebook\n    following\
+          \ Papermill semantics (after a parameters cell if present,\n    otherwise\
+          \ at top). Execution uses a Python kernel; nbclient and\n    ipykernel must\
+          \ be available at runtime (installed via\n    packages_to_install for notebook\
+          \ components).\n    \"\"\"\n    import os\n    import subprocess\n    import\
+          \ sys\n\n    from nbclient import NotebookClient\n    import nbformat\n\n\
+          \    # Ensure a usable 'python3' kernel is present; install kernelspec if\
+          \ missing\n    print('[KFP Notebook] Checking for Python kernel...', flush=True)\n\
+          \    try:\n        from jupyter_client.kernelspec import KernelSpecManager\
+          \  # type: ignore\n        ksm = KernelSpecManager()\n        have_py3 =\
+          \ 'python3' in ksm.find_kernel_specs()\n        if not have_py3:\n     \
+          \       print(\n                '[KFP Notebook] Python3 kernel not found,\
+          \ installing...',\n                flush=True)\n            try:\n     \
+          \           subprocess.run([\n                    sys.executable, '-m',\
+          \ 'ipykernel', 'install', '--user',\n                    '--name', 'python3',\
+          \ '--display-name', 'Python 3'\n                ],\n                   \
+          \            check=True,\n                               stdout=subprocess.DEVNULL,\n\
+          \                               stderr=subprocess.DEVNULL)\n           \
+          \     print(\n                    '[KFP Notebook] Python3 kernel installed\
+          \ successfully',\n                    flush=True)\n            except subprocess.CalledProcessError\
+          \ as e:\n                raise RuntimeError(\n                    \"Failed\
+          \ to install 'python3' kernelspec for ipykernel. \"\n                  \
+          \  'Ensure ipykernel is available in the environment or include it via packages_to_install.\
+          \ '\n                    f'Error: {e}') from e\n        else:\n        \
+          \    print('[KFP Notebook] Python3 kernel found', flush=True)\n    except\
+          \ ImportError as e:\n        raise RuntimeError(\n            \"jupyter_client\
+          \ is not available. Ensure it's installed in the environment or include\
+          \ it via packages_to_install. \"\n            f'Error: {e}') from e\n\n\
+          \    nb_path = os.path.join(__KFP_EMBEDDED_ASSET_DIR, __KFP_NOTEBOOK_REL_PATH)\n\
+          \n    try:\n        nb = nbformat.read(nb_path, as_version=4)\n    except\
+          \ Exception as e:\n        raise RuntimeError(\n            f'Failed to\
+          \ read notebook {nb_path}. Ensure it is a valid Jupyter notebook. Error:\
+          \ {e}'\n        ) from e\n\n    try:\n        __kfp_write_parameters_cell(nb,\
+          \ kwargs)\n        print(\n            f'[KFP Notebook] Executing notebook\
+          \ with {len(nb.get(\"cells\", []))} cells',\n            flush=True)\n\n\
+          \        # Use our custom streaming client for real-time output (defined\
+          \ in the\n        # generated ephemeral source)\n        client = KFPStreamingNotebookClient(\n\
+          \            nb,\n            timeout=None,\n            allow_errors=False,\n\
+          \            store_widget_state=False,\n            kernel_name='python3')\n\
+          \        client.execute(cwd=__KFP_EMBEDDED_ASSET_DIR)\n\n        print('[KFP\
+          \ Notebook] Execution complete', flush=True)\n\n    except Exception as\
+          \ e:\n        raise RuntimeError(f'Notebook execution failed. Error: {e}')\
+          \ from e\n\n\n# Bind helper into dsl namespace so user code can call dsl.run_notebook(...)\n\
+          dsl.run_notebook = kfp_run_notebook\n\n\ndef train_component(\n    in_dataset:\
+          \ Input[Dataset],\n    epochs: int,\n    learning_rate: float,\n    out_model:\
+          \ Output[Model],\n) -> None:\n    dsl.run_notebook(\n        dataset_path=in_dataset.path,\n\
+          \        model_path=out_model.path,\n        epochs=epochs,\n        learning_rate=learning_rate,\n\
+          \    )\n\n"
+        image: python:3.12
+pipelineInfo:
+  name: composable-notebook-workflow
+root:
+  dag:
+    tasks:
+      data-prep-component:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-data-prep-component
+        inputs:
+          parameters:
+            n_rows:
+              componentInputParameter: n_rows
+        taskInfo:
+          name: data-prep-component
+      train-component:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-component
+        dependentTasks:
+        - data-prep-component
+        inputs:
+          artifacts:
+            in_dataset:
+              taskOutputArtifact:
+                outputArtifactKey: out_dataset
+                producerTask: data-prep-component
+          parameters:
+            epochs:
+              componentInputParameter: epochs
+            learning_rate:
+              componentInputParameter: learning_rate
+        taskInfo:
+          name: train-component
+  inputDefinitions:
+    parameters:
+      epochs:
+        defaultValue: 10.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      learning_rate:
+        defaultValue: 0.001
+        isOptional: true
+        parameterType: NUMBER_DOUBLE
+      n_rows:
+        defaultValue: 100.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.15.2

@@ -4,3 +4,5 @@ lib/
 .pnp.*
 tsconfig.tsbuildinfo
 minimal_workflow_widget/labextension/
+minimal_workflow_widget/_version.py
+*.egg-info/

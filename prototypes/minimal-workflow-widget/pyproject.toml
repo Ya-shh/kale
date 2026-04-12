@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling>=1.5.0", "hatch-jupyter-builder>=0.8.3", "jupyterlab>=4.0.0,<5"]
+build-backend = "hatchling.build"
+
+[project]
+name = "minimal_workflow_widget"
+version = "0.1.0"
+description = "Minimal DocumentWidget + React Flow prototype for Composable Kale Notebooks."
+requires-python = ">=3.8"
+dependencies = ["jupyter_server>=2.0.0,<3"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["minimal_workflow_widget"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"minimal_workflow_widget/labextension" = "share/jupyter/labextensions/minimal-workflow-widget"
+
+[tool.hatch.build.hooks.jupyter-builder]
+dependencies = ["hatch-jupyter-builder>=0.5"]
+build-function = "hatch_jupyter_builder.npm_builder"
+ensured-targets = [
+  "minimal_workflow_widget/labextension/package.json"
+]
+
+[tool.hatch.build.hooks.jupyter-builder.build-kwargs]
+build_cmd = "build:labextension:dev"
+npm = ["jlpm"]

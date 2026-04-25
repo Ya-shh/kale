@@ -26,7 +26,8 @@ import {
 import { JupyterFrontEnd } from '@jupyterlab/application';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { ThemeProvider } from '@mui/material/styles';
-import { FormControlLabel, Switch } from '@mui/material';
+import { FormControlLabel, Link, Switch } from '@mui/material';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { theme } from '../Theme';
 import { Input } from '../components/Input';
 import Commands from '../lib/Commands';
@@ -61,6 +62,7 @@ interface IProps {
   kernel: Kernel.IKernelConnection;
   enableKaleByDefault: boolean;
   autoSaveOnCompileOrRun: boolean;
+  outputPath: string;
 }
 
 interface IState {
@@ -102,7 +104,6 @@ export const DefaultState: IState = {
     base_image: '',
     enable_caching: true, // Default value in KFP is true
     steps_defaults: [],
-    output_path: '',
   },
   runDeployment: false,
   deploymentType: 'compile',
@@ -194,10 +195,6 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
     this.setState(prevState => ({
       metadata: { ...prevState.metadata, pipeline_description: desc },
     }));
-  updateOutputPath = (path: string) =>
-    this.setState(prevState => ({
-      metadata: { ...prevState.metadata, output_path: path },
-    }));
   updateDockerImage = (name: string) =>
     this.setState(prevState => ({
       metadata: {
@@ -233,6 +230,13 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
     this.setState(prevState => ({
       deployDebugMessage: !prevState.deployDebugMessage,
     }));
+
+  openKaleSettings = () => {
+    // Settings Editor filter matches schema title, not plugin id.
+    this.props.lab.commands.execute('settingeditor:open', {
+      query: 'Kale',
+    });
+  };
 
   // restore state to default values
   resetState = () =>
@@ -464,7 +468,6 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
           base_image:
             notebookMetadata['base_image'] || DefaultState.metadata.base_image,
           steps_defaults: DefaultState.metadata.steps_defaults,
-          output_path: notebookMetadata['output_path'] || '',
         };
         this.setState({
           metadata: metadata,
@@ -546,6 +549,11 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
     // assign the default docker image in case it is empty
     if (metadata.base_image === '') {
       metadata.base_image = DefaultState.metadata.base_image;
+    }
+
+    // outputPath comes from JupyterLab Settings; backend expects it as output_path.
+    if (this.props.outputPath) {
+      metadata.output_path = this.props.outputPath;
     }
 
     const nbFilePath = this.getActiveNotebookPath();
@@ -703,17 +711,6 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
       />
     );
 
-    const output_path_input = (
-      <Input
-        variant="standard"
-        inputIndex={0}
-        label={'Output Directory'}
-        updateValue={this.updateOutputPath}
-        value={this.state.metadata.output_path || ''}
-        placeholder={'e.g. pipelines/output'}
-      />
-    );
-
     const enable_caching_toggle = (
       <FormControlLabel
         control={
@@ -805,8 +802,26 @@ export class KubeflowKaleLeftPanel extends React.Component<IProps, IState> {
                 {experiment_name_input}
                 {pipeline_name_input}
                 {pipeline_desc_input}
-                {output_path_input}
                 {enable_caching_toggle}
+              </div>
+
+              <div className="kale-settings-notice">
+                <SettingsOutlinedIcon
+                  className="kale-settings-notice-icon"
+                  fontSize="small"
+                />
+                <span>
+                  Advanced Kale settings live in JupyterLab Settings.{' '}
+                  <Link
+                    component="button"
+                    type="button"
+                    underline="hover"
+                    onClick={this.openKaleSettings}
+                    sx={{ color: theme.kale.headers.main }}
+                  >
+                    Open settings
+                  </Link>
+                </span>
               </div>
             </div>
 

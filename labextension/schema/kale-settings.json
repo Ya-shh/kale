@@ -15,6 +15,12 @@
       "title": "Auto-save the notebook when compiling or running",
       "description": "When enabled, Kale saves the notebook automatically before compile, run, or upload without prompting. When disabled, you are asked to save if there are unsaved changes.",
       "default": false
+    },
+    "outputPath": {
+      "type": "string",
+      "title": "Pipeline output directory",
+      "description": "Relative path (from the notebook directory) where the compiled KFP DSL Python script is saved. Leave empty to use the default '.kale/' directory. The path must resolve inside the notebook's project directory.",
+      "default": ".kale"
     }
   },
   "additionalProperties": false,

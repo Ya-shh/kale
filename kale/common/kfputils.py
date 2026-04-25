@@ -17,14 +17,16 @@ import importlib.util
 import json
 import logging
 import os
+import re
 from shutil import copyfile
 import tempfile
 import time
 from typing import Any
 
 import kfp
+from kfp_server_api.exceptions import ApiException
 
-from kale.common import utils
+from kale.common import kfp_client_factory, utils
 
 KFP_RUN_ID_LABEL_KEY = "pipeline/runid"
 KFP_RUN_NAME_ANNOTATION_KEY = "pipelines.kubeflow.org/run_name"
@@ -38,10 +40,6 @@ _logger = None
 log = logging.getLogger(__name__)
 
 
-def _get_kfp_client(host=None, namespace: str = "kubeflow"):
-    return kfp.Client(host=host, namespace=namespace)
-
-
 def get_pipeline_id(pipeline_name: str, host: str = None) -> str:
     """List through the existing pipelines and filter by pipeline name.
 
@@ -52,13 +50,16 @@ def get_pipeline_id(pipeline_name: str, host: str = None) -> str:
     Returns:
         The matching pipeline id. None if not found
     """
-    client = _get_kfp_client(host)
+    client = kfp_client_factory.get_kfp_client(host)
     token = ""
     pipeline_id = None
     while pipeline_id is None and token is not None:
         pipelines = client.list_pipelines(page_token=token)
         token = pipelines.next_page_token
-        f = next(filter(lambda x: x.display_name == pipeline_name, pipelines.pipelines or []), None)
+        f = next(
+            filter(lambda x: x.display_name == pipeline_name, pipelines.pipelines or []),
+            None,
+        )
         if f is not None:
             pipeline_id = f.pipeline_id
     return pipeline_id
@@ -75,12 +76,14 @@ def get_pipeline_version_id(version_name: str, pipeline_id: str, host: str = Non
     Returns:
         The matching pipeline id. None if not found
     """
-    client = _get_kfp_client(host)
+    client = kfp_client_factory.get_kfp_client(host)
     page_token = ""
     version_id = None
     while version_id is None and page_token is not None:
         versions = client.pipelines.list_pipeline_versions(
-            resource_key_type="PIPELINE", resource_key_id=pipeline_id, page_token=page_token
+            resource_key_type="PIPELINE",
+            resource_key_id=pipeline_id,
+            page_token=page_token,
         )
         page_token = versions.next_page_token
         f = next(filter(lambda x: x.name == version_name, versions.versions), None)
@@ -122,7 +125,7 @@ def upload_pipeline(
         host: custom host when executing outside of the cluster
     Returns: (pipeline_id, version_id)
     """
-    client = _get_kfp_client(host)
+    client = kfp_client_factory.get_kfp_client(host)
     log.info("Uploading pipeline '%s'...", pipeline_name)
     pipeline_id = get_pipeline_id(pipeline_name, host=host)
     if not pipeline_id:
@@ -169,7 +172,7 @@ def run_pipeline(
     Returns:
         Pipeline run metadata
     """
-    client = _get_kfp_client(host)
+    client = kfp_client_factory.get_kfp_client(host)
     log.info("Creating KFP experiment '%s'...", experiment_name)
     client.create_experiment(experiment_name)
     pipeline = client.get_pipeline(pipeline_id)
@@ -180,7 +183,10 @@ def run_pipeline(
             pipeline_id=pipeline_id, pipeline_version_id=version_id
         ).display_name
     except Exception:
-        log.debug("Could not retrieve pipeline version with ID '%s'. Using 'unknown'.", version_id)
+        log.debug(
+            "Could not retrieve pipeline version with ID '%s'. Using 'unknown'.",
+            version_id,
+        )
         version_name = "unknown"
 
     if not run_name:
@@ -193,12 +199,41 @@ def run_pipeline(
         display_version,
     )
 
-    run = client.create_run_from_pipeline_package(
-        pipeline_file=pipeline_package_path,
-        arguments=kwargs,
-        run_name=run_name,
-        experiment_name=experiment_name,
-    )
+    try:
+        run = client.create_run_from_pipeline_package(
+            pipeline_file=pipeline_package_path,
+            arguments=kwargs,
+            run_name=run_name,
+            experiment_name=experiment_name,
+        )
+    except ApiException as e:
+        try:
+            body = json.loads(e.body or "{}")
+
+            if body.get("code") == 13:
+                details = body.get("details") or []
+
+                for d in details:
+                    if (
+                        d.get("@type") == "type.googleapis.com/google.rpc.Status"
+                        and d.get("code") == 2
+                    ):
+                        message = body.get("message", "").lower()
+
+                        if "failed to unmarshal kubernetes config" in message and re.search(
+                            r"unknown field.*securitycontext",
+                            message,
+                            re.IGNORECASE,
+                        ):
+                            raise RuntimeError(
+                                "Your KFP server does not support the 'securityContext' field. "
+                                "Please upgrade Kubeflow Pipelines to version >= 2.16.0."
+                            ) from e
+
+        except (ValueError, TypeError):
+            pass
+
+        raise
 
     print("Pipeline submitted!")
     log.info("Run ID: %s", run.run_id)
@@ -240,7 +275,7 @@ def get_experiment_from_run_id(run_id: str):
     Returns: ApiExperiment - the KFP Experiment which owns the run
     """
     log.info("Getting experiment from run with ID '%s'...", run_id)
-    client = _get_kfp_client()
+    client = kfp_client_factory.get_kfp_client()
     run = client.runs.get_run(run_id=run_id).run
     experiment_id = None
     type_experiment = client.api_models.ApiResourceType.EXPERIMENT
@@ -256,7 +291,7 @@ def get_experiment_from_run_id(run_id: str):
 
 def get_run(run_id: str, host: str = None):
     """Retrieve KFP run based on RunID."""
-    client = _get_kfp_client(host)
+    client = kfp_client_factory.get_kfp_client(host)
     return client.get_run(run_id)
 
 
@@ -323,7 +358,11 @@ def compute_component_id(pod):
     Kale steps are KFP SDK Components. This is the way MetadataWriter generates
     unique names for such components.
     """
-    log.info("Computing component ID for pod %s/%s...", pod.metadata.namespace, pod.metadata.name)
+    log.info(
+        "Computing component ID for pod %s/%s...",
+        pod.metadata.namespace,
+        pod.metadata.name,
+    )
     component_spec_text = pod.metadata.annotations.get(KFP_COMPONENT_SPEC_ANNOTATION_KEY)
     if not component_spec_text:
         raise ValueError("KFP component spec annotation not found in pod")

@@ -58,6 +58,7 @@ const id = 'jupyterlab-kubeflow-kale:deploymentPanel';
 const KALE_SETTINGS_PLUGIN_ID = 'jupyterlab-kubeflow-kale:kale-settings';
 const ENABLE_KALE_BY_DEFAULT_KEY = 'enableKaleByDefault';
 const AUTO_SAVE_ON_COMPILE_OR_RUN_KEY = 'autoSaveOnCompileOrRun';
+const OUTPUT_PATH_KEY = 'outputPath';
 
 const kaleIcon = new LabIcon({ name: 'kale:logo', svgstr: kaleIconSvg });
 let kalePanelWidget: ReactWidget | undefined;
@@ -123,6 +124,7 @@ async function activate(
     const [kaleSettings, setKaleSettings] = React.useState({
       enableKaleByDefault: false,
       autoSaveOnCompileOrRun: false,
+      outputPath: '',
     });
 
     React.useEffect(() => {
@@ -144,6 +146,10 @@ async function activate(
               (loadedSetting.get(AUTO_SAVE_ON_COMPILE_OR_RUN_KEY).composite as
                 | boolean
                 | undefined) ?? false,
+            outputPath:
+              (loadedSetting.get(OUTPUT_PATH_KEY).composite as
+                | string
+                | undefined) ?? '',
           });
 
           const update = () => {
@@ -179,6 +185,7 @@ async function activate(
         kernel={kernel}
         enableKaleByDefault={kaleSettings.enableKaleByDefault}
         autoSaveOnCompileOrRun={kaleSettings.autoSaveOnCompileOrRun}
+        outputPath={kaleSettings.outputPath}
       />
     );
   };

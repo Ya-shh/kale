@@ -12,8 +12,7 @@ of its cells visible as its own step in the KFP UI.
 ## A first composition
 
 Take a notebook that prepares data and a notebook that trains on it. Neither
-knows about the other; each is a normal Kale notebook that you can still run
-and compile on its own.
+references the other; each is a normal Kale notebook.
 
 `preprocessing.ipynb`:
 
@@ -26,7 +25,7 @@ dataset = pd.read_csv("data.csv")
 
 ```python
 # tag: step:train
-model = RandomForestClassifier().fit(dataset, labels)
+model = RandomForestClassifier().fit(dataset.drop("y", axis=1), dataset["y"])
 ```
 
 Now a third notebook composes them. It contains nothing but two reference
@@ -65,8 +64,8 @@ notebook that contains the cell.
 ```
 
 The Kale panel writes both for you: choose the **Notebook** cell type and enter
-a path. A reference cell holds no code of its own, so Kale places a comment in
-it explaining that.
+a path. A reference cell holds no code of its own, so when the cell is empty Kale
+places a comment there explaining that.
 
 ```{note}
 The `Notebook` cell type is hidden by default in the JupyterLab panel. See
@@ -103,7 +102,7 @@ Its own steps become top-level components in the pipeline, next to the sub-DAGs.
 | --- | --- |
 | `notebook:preprocessing` | *(empty)* |
 | `notebook:training` | *(empty)* |
-| `step:report` | `print(f"accuracy: {accuracy}")` |
+| `step:report` | `print(model.feature_importances_)` |
 
 A root step runs after everything above it in the notebook and before
 everything below it, so a composition runs the way it reads. Variables cross
@@ -116,8 +115,8 @@ Each referenced notebook is compiled into its own importable module, written
 next to the root notebook's generated DSL in `.kale/`. The root notebook's DSL
 imports those modules and wires everything together.
 
-Each module is a complete pipeline of its own, so you can read it, and run it
-standalone, independently of the composition that imports it.
+Each module is a complete pipeline definition of its own, so you can read it and
+compile it independently of the composition that imports it.
 
 ## Enabling the cell type
 
@@ -137,7 +136,14 @@ inert.
 
 ## Current limitations
 
-Each of these is reported at compile time rather than at pipeline runtime.
+**A notebook that reads another's variables is not self-contained.** It runs only
+as part of the composition; compiled alone, nothing provides those variables and
+the step fails at runtime. Stand-in values do not help: the notebook then produces
+the variable itself, so it either stops receiving the upstream value or conflicts
+with the real producer. This is a known limitation of inferring data flow from
+names (KEP-0812, caveat 6).
+
+The following are reported at compile time rather than at pipeline runtime.
 
 **Nested references are not supported.** A referenced notebook cannot itself
 reference a third notebook. Reference every notebook from the root notebook
@@ -151,8 +157,10 @@ rather than silently dropping it:
 
 Comments are fine, which is why the panel can leave an explanatory one there.
 
-**A notebook cannot reference itself,** directly or through another notebook.
-Reference cycles raise.
+**A notebook cannot reference itself.** That raises as a reference cycle.
+
+**A variable needs a single producer.** If two notebooks or steps both define a
+variable that another one reads, Kale raises rather than guessing which to use.
 
 **A reference needs a path.** A `notebook:` cell with no `notebook_path` in its
 metadata raises, rather than compiling to nothing.
@@ -169,4 +177,4 @@ within a root notebook, since each names a node in the same pipeline.
 - [Cell Types & Annotations](cell-types.md), the full tag vocabulary
 - [Data Passing & Marshalling](data-passing.md), how variables move between steps
 - [Pipeline Compilation](compilation.md), how a notebook becomes KFP DSL
-- `examples/composition/`, five runnable notebooks demonstrating both shapes
+- `examples/composition/`, five example notebooks demonstrating both shapes

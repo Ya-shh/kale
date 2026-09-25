@@ -16,12 +16,13 @@ There are two entry points and three notebooks they reference.
 | `main_mixed.ipynb` | **Entry point.** The same three references, plus a `step:` cell of its own. |
 | `notebook_a.ipynb` | Produces `names`, `dataset` and `weights`. |
 | `notebook_b.ipynb` | Consumes those, fits a `model` and a `weight_total`. |
-| `notebook_c.ipynb` | Consumes the model, computes a `prediction`, reports a metric. |
+| `notebook_c.ipynb` | Consumes `model`, `weight_total` and `names`, computes a `prediction`, reports a metric. |
 
-`notebook_a`, `notebook_b` and `notebook_c` are ordinary Kale notebooks. None of
-them mentions the others, and each can be compiled and run on its own. What
-links them is that they share variable names, which is all Kale needs to order
-them and pass data between them.
+`notebook_a`, `notebook_b` and `notebook_c` are ordinary Kale notebooks, and none
+of them mentions the others. What links them is that they share variable names,
+which is all Kale needs to order them and pass data between them. It also means
+only `notebook_a` runs on its own: `notebook_b` and `notebook_c` read variables
+produced upstream, so they run as part of the composition.
 
 ## The two shapes
 
@@ -53,10 +54,10 @@ own.
 
 ## What to look at
 
-Nothing here declares an order. `notebook_b` uses `dataset`, which
-`notebook_a` defines, so `notebook_a` runs first and `dataset` is marshalled
-between them. Open `notebook_a.ipynb` and you will find no mention of
-`notebook_b`, and no `prev:` tag anywhere across the three.
+Nothing declares an order between the notebooks. `notebook_b` uses `dataset`,
+which `notebook_a` defines, so `notebook_a` runs first and `dataset` is marshalled
+between them. The only `prev:` tags order cells inside a notebook; none links one
+notebook to another.
 
 Note also that `weights` is produced by `notebook_a` and consumed by
 `notebook_b`, while `names` is produced by `notebook_a` and consumed by both
@@ -70,8 +71,8 @@ $ kale --nb main.ipynb
 ```
 
 That writes the generated DSL into `.kale/`: one module per referenced
-notebook, plus the pipeline that imports them. Each module is a runnable
-pipeline in its own right.
+notebook, plus the pipeline that imports them. Each module also compiles on its
+own.
 
 To compile and submit in one go:
 

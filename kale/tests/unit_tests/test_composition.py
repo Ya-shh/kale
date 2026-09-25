@@ -13,6 +13,8 @@
 # limitations under the License.
 """Tests for notebooks that reference other notebooks."""
 
+import re
+
 import nbformat as nbf
 import pytest
 import yaml
@@ -457,6 +459,39 @@ def test_a_notebook_without_a_pipeline_name_is_named_after_itself(tmp_path, monk
     monkeypatch.chdir(tmp_path)
     processor = NotebookProcessor(str(notebook), {"experiment_name": "test"})
     assert processor.pipeline.config.pipeline_name == "my-flow"
+
+
+@pytest.mark.parametrize("file_name", ["日本語.ipynb", "___.ipynb"])
+def test_an_unnameable_notebook_still_gets_a_valid_pipeline_name(tmp_path, monkeypatch, file_name):
+    """A file name that sanitizes to nothing still gets a stable, valid name."""
+    notebook = tmp_path / file_name
+    _write_nb(notebook, "placeholder", [(["step:only"], "x = 1")])
+    metadata = nbf.read(str(notebook), as_version=4)
+    del metadata.metadata["kubeflow_notebook"]["pipeline_name"]
+    nbf.write(metadata, str(notebook))
+
+    monkeypatch.chdir(tmp_path)
+    first = NotebookProcessor(str(notebook), {"experiment_name": "test"})
+    again = NotebookProcessor(str(notebook), {"experiment_name": "test"})
+
+    assert re.fullmatch(r"notebook-[0-9a-f]{8}", first.pipeline.config.pipeline_name)
+    assert again.pipeline.config.pipeline_name == first.pipeline.config.pipeline_name
+
+
+def test_unnameable_root_notebooks_do_not_share_generated_modules(tmp_path, monkeypatch):
+    """Root notebooks whose names sanitize to nothing keep separate modules."""
+    _write_nb(tmp_path / "shared.ipynb", "shared", [(["step:work"], "dataset = [1]")])
+    roots = ("日本語.ipynb", "数据处理.ipynb")
+    for root_file in roots:
+        _write_nb(tmp_path / root_file, "root", [_ref("shared", "./shared.ipynb")])
+
+    monkeypatch.chdir(tmp_path)
+    for root_file in roots:
+        processor = NotebookProcessor(str(tmp_path / root_file), {"experiment_name": "test"})
+        Compiler(processor.run(), processor.get_imports_and_functions()).compile()
+
+    modules = sorted(p.name for p in (tmp_path / ".kale").glob("kale_notebook_*.py"))
+    assert len(modules) == 2
 
 
 def test_ui_compile_path_composes(tmp_path, monkeypatch):

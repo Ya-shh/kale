@@ -469,7 +469,7 @@ class Compiler:
         """Name identifying the notebook being compiled, for generated files."""
         notebook = getattr(self.pipeline.config, "notebook_path", "")
         if notebook:
-            return utils.sanitize_k8s_name(os.path.splitext(os.path.basename(notebook))[0])
+            return utils.notebook_k8s_name(notebook)
         return self.pipeline.config.pipeline_name
 
     def _boundary_ref(self, node, var):

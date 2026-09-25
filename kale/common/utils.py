@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import errno
+import hashlib
 import json
 import logging
 import os
@@ -112,6 +113,12 @@ def sanitize_k8s_name(name):
     """Sanitize a string to conform to Kubernetes naming conventions."""
     name = re.sub("-+", "-", re.sub("[^-0-9a-z]+", "-", name.lower()))
     return name.lstrip("-").rstrip("-")
+
+
+def notebook_k8s_name(notebook_path: str) -> str:
+    """Kubernetes-safe name from a notebook's file name, hashed if none survives."""
+    stem = os.path.splitext(os.path.basename(notebook_path))[0]
+    return sanitize_k8s_name(stem) or f"notebook-{hashlib.sha256(stem.encode()).hexdigest()[:8]}"
 
 
 def is_ipython() -> bool:

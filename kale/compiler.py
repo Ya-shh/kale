@@ -472,8 +472,8 @@ class Compiler:
     def _module_name(self, node):
         """Module the referenced notebook of ``node`` is generated into.
 
-        Keyed on the root notebook rather than on its pipeline name: file names
-        are necessarily unique within a directory, pipeline names are not.
+        Keyed on the root notebook's path rather than on its pipeline name,
+        which several notebooks may share.
         """
         return _module_name(self._root_name(), node.name)
 

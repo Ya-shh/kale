@@ -116,9 +116,10 @@ def sanitize_k8s_name(name):
 
 
 def notebook_k8s_name(notebook_path: str) -> str:
-    """Kubernetes-safe name from a notebook's file name, hashed if none survives."""
+    """Kubernetes-safe name for a notebook: its file name plus a hash of its path."""
     stem = os.path.splitext(os.path.basename(notebook_path))[0]
-    return sanitize_k8s_name(stem) or f"notebook-{hashlib.sha256(stem.encode()).hexdigest()[:8]}"
+    digest = hashlib.sha256(os.path.realpath(notebook_path).encode()).hexdigest()[:8]
+    return f"{sanitize_k8s_name(stem) or 'notebook'}-{digest}"
 
 
 def is_ipython() -> bool:

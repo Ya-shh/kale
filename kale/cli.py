@@ -91,10 +91,11 @@ def main():
     metadata_group.add_argument(
         # No default: a default would always be an override, so the notebook's
         # own `pipeline_name` could never win. Left unset, the name comes from
-        # the notebook's metadata, or from its file name.
+        # the notebook's metadata, or from its file name and path.
         "--pipeline_name",
         type=str,
-        help="Name of the deployed pipeline (default: the notebook's own name)",
+        help="Name of the deployed pipeline (default: the notebook's pipeline_name, "
+        "else its file name plus a hash of its path)",
     )
     metadata_group.add_argument(
         "--pipeline_description", type=str, help="Description of the deployed pipeline"

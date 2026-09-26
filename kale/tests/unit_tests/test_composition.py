@@ -19,20 +19,21 @@ import nbformat as nbf
 import pytest
 import yaml
 
-from kale.common import kfputils
+from kale.common import kfputils, utils
 from kale.compiler import Compiler, _module_name
 from kale.processors import NotebookProcessor
 from kale.step import SubPipeline
 
 
 def _write_nb(path, name, cells):
-    """Write a notebook. Cells are ``(tags, source)`` or ``(tags, source, metadata)``."""
+    """Write a notebook. Cells are ``(tags, source)`` or ``(tags, source, metadata)``.
+
+    A ``name`` of None leaves the pipeline unnamed.
+    """
     nb = nbf.v4.new_notebook()
-    nb.metadata["kubeflow_notebook"] = {
-        "pipeline_name": name,
-        "experiment_name": "test",
-        "volumes": [],
-    }
+    nb.metadata["kubeflow_notebook"] = {"experiment_name": "test", "volumes": []}
+    if name is not None:
+        nb.metadata["kubeflow_notebook"]["pipeline_name"] = name
     for spec in cells:
         cell = nbf.v4.new_code_cell(source=spec[1])
         cell.metadata["tags"] = spec[0]
@@ -59,9 +60,14 @@ def _compile(path, name="root"):
     return pipeline, Compiler(pipeline, processor.get_imports_and_functions()).compile()
 
 
+def _root_module(tmp_path, name, root="root"):
+    """Name of the module generated for reference ``name`` of ``<root>.ipynb``."""
+    return _module_name(utils.notebook_k8s_name(str(tmp_path / f"{root}.ipynb")), name)
+
+
 def _module(tmp_path, name, root="root"):
     """Source of the DSL module generated for a referenced notebook."""
-    return open(tmp_path / ".kale" / f"{_module_name(root, name)}.py").read()
+    return open(tmp_path / ".kale" / f"{_root_module(tmp_path, name, root)}.py").read()
 
 
 def _producer_consumer(tmp_path):
@@ -315,13 +321,13 @@ def test_each_referenced_notebook_becomes_its_own_module(tmp_path, monkeypatch):
     _, dsl_path = _compile(root)
 
     producer_module = _module(tmp_path, "producer")
-    assert f"def {_module_name('root', 'producer')}_pipeline(" in producer_module
+    assert f"def {_root_module(tmp_path, 'producer')}_pipeline(" in producer_module
     assert "@kfp_dsl.component(" in producer_module
     consumer_module = _module(tmp_path, "consumer")
     assert "dataset_input_artifact: Input[Dataset]" in consumer_module
 
     dsl = open(dsl_path).read()
-    producer_module_name = _module_name("root", "producer")
+    producer_module_name = _root_module(tmp_path, "producer")
     assert f"from {producer_module_name} import {producer_module_name}_pipeline" in dsl
     assert f"dataset_input_artifact={producer_module_name}_task.output" in dsl
 
@@ -351,7 +357,7 @@ def test_referenced_notebook_keeps_its_pipeline_parameters(tmp_path, monkeypatch
     module = _module(tmp_path, "child")
     assert "def scale_step(" in module and "factor: int = 3" in module
     assert "factor = {factor}" in module
-    assert f"def {_module_name('root', 'child')}_pipeline(factor: int = 3)" in module
+    assert f"def {_root_module(tmp_path, 'child')}_pipeline(factor: int = 3)" in module
     assert "factor=factor" in module
 
 
@@ -379,7 +385,7 @@ def test_root_parameters_reach_a_referenced_notebooks_steps(tmp_path, monkeypatc
     assert "epochs: int = 7" in module
     assert "epochs = {epochs}" in module
     # and the nested pipeline declares it, so the root can pass it in
-    assert f"def {_module_name('root', 'child')}_pipeline(epochs: int = 7)" in module
+    assert f"def {_root_module(tmp_path, 'child')}_pipeline(epochs: int = 7)" in module
     assert "epochs=epochs" in open(dsl_path).read()
 
 
@@ -407,7 +413,8 @@ def test_root_parameters_win_over_a_referenced_notebooks_own(tmp_path, monkeypat
 
     module = _module(tmp_path, "child")
     assert (
-        f"def {_module_name('root', 'child')}_pipeline(epochs: int = 7, lr: float = 0.5)" in module
+        f"def {_root_module(tmp_path, 'child')}_pipeline(epochs: int = 7, lr: float = 0.5)"
+        in module
     )
 
 
@@ -482,8 +489,8 @@ def test_notebook_named_like_a_module_is_safe(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     _, dsl_path = _compile(root)
 
-    assert (tmp_path / ".kale" / f"{_module_name('root', 'json')}.py").exists()
-    assert f"from {_module_name('root', 'json')} import" in open(dsl_path).read()
+    assert (tmp_path / ".kale" / f"{_root_module(tmp_path, 'json')}.py").exists()
+    assert f"from {_root_module(tmp_path, 'json')} import" in open(dsl_path).read()
 
 
 def test_two_compositions_in_one_directory_do_not_collide(tmp_path, monkeypatch):
@@ -499,32 +506,29 @@ def test_two_compositions_in_one_directory_do_not_collide(tmp_path, monkeypatch)
         processor = NotebookProcessor(str(tmp_path / root_file), {"experiment_name": "test"})
         Compiler(processor.run(), processor.get_imports_and_functions()).compile()
 
-    assert (tmp_path / ".kale" / f"{_module_name('first', 'shared')}.py").exists()
-    assert (tmp_path / ".kale" / f"{_module_name('second', 'shared')}.py").exists()
+    assert (tmp_path / ".kale" / f"{_root_module(tmp_path, 'shared', 'first')}.py").exists()
+    assert (tmp_path / ".kale" / f"{_root_module(tmp_path, 'shared', 'second')}.py").exists()
 
 
-def test_a_notebook_without_a_pipeline_name_is_named_after_itself(tmp_path, monkeypatch):
-    """A notebook that does not name its pipeline compiles under its own file
-    name, so two of them do not land on the same generated files."""
+def test_a_notebook_without_a_pipeline_name_is_named_after_its_path(tmp_path, monkeypatch):
+    """An unnamed pipeline takes the notebook's file name plus a hash of its
+    path, the same however the path is spelled."""
     notebook = tmp_path / "my_flow.ipynb"
-    _write_nb(notebook, "placeholder", [(["step:only"], "x = 1")])
-    metadata = nbf.read(str(notebook), as_version=4)
-    del metadata.metadata["kubeflow_notebook"]["pipeline_name"]
-    nbf.write(metadata, str(notebook))
+    _write_nb(notebook, None, [(["step:only"], "x = 1")])
 
     monkeypatch.chdir(tmp_path)
-    processor = NotebookProcessor(str(notebook), {"experiment_name": "test"})
-    assert processor.pipeline.config.pipeline_name == "my-flow"
+    by_absolute = NotebookProcessor(str(notebook), {"experiment_name": "test"})
+    by_relative = NotebookProcessor("my_flow.ipynb", {"experiment_name": "test"})
+
+    assert re.fullmatch(r"my-flow-[0-9a-f]{8}", by_absolute.pipeline.config.pipeline_name)
+    assert by_relative.pipeline.config.pipeline_name == by_absolute.pipeline.config.pipeline_name
 
 
 @pytest.mark.parametrize("file_name", ["日本語.ipynb", "___.ipynb"])
 def test_an_unnameable_notebook_still_gets_a_valid_pipeline_name(tmp_path, monkeypatch, file_name):
     """A file name that sanitizes to nothing still gets a stable, valid name."""
     notebook = tmp_path / file_name
-    _write_nb(notebook, "placeholder", [(["step:only"], "x = 1")])
-    metadata = nbf.read(str(notebook), as_version=4)
-    del metadata.metadata["kubeflow_notebook"]["pipeline_name"]
-    nbf.write(metadata, str(notebook))
+    _write_nb(notebook, None, [(["step:only"], "x = 1")])
 
     monkeypatch.chdir(tmp_path)
     first = NotebookProcessor(str(notebook), {"experiment_name": "test"})
@@ -534,20 +538,33 @@ def test_an_unnameable_notebook_still_gets_a_valid_pipeline_name(tmp_path, monke
     assert again.pipeline.config.pipeline_name == first.pipeline.config.pipeline_name
 
 
-def test_unnameable_root_notebooks_do_not_share_generated_modules(tmp_path, monkeypatch):
-    """Root notebooks whose names sanitize to nothing keep separate modules."""
-    _write_nb(tmp_path / "shared.ipynb", "shared", [(["step:work"], "dataset = [1]")])
-    roots = ("日本語.ipynb", "数据处理.ipynb")
+@pytest.mark.parametrize(
+    "roots",
+    [
+        ("a_b.ipynb", "a-b.ipynb"),
+        ("data/a-b.ipynb", "data2/a-b.ipynb"),
+        ("日本語.ipynb", "数据处理.ipynb"),
+    ],
+)
+def test_notebooks_named_alike_do_not_collide(tmp_path, monkeypatch, roots):
+    """Unnamed notebooks whose file names sanitize alike, or match across
+    directories, keep their own pipeline names and generated files."""
+    shared = tmp_path / "shared.ipynb"
+    _write_nb(shared, "shared", [(["step:work"], "dataset = [1]")])
     for root_file in roots:
-        _write_nb(tmp_path / root_file, "root", [_ref("shared", "./shared.ipynb")])
+        (tmp_path / root_file).parent.mkdir(exist_ok=True)
+        _write_nb(tmp_path / root_file, None, [_ref("shared", str(shared))])
 
     monkeypatch.chdir(tmp_path)
+    names = set()
     for root_file in roots:
         processor = NotebookProcessor(str(tmp_path / root_file), {"experiment_name": "test"})
+        names.add(processor.pipeline.config.pipeline_name)
         Compiler(processor.run(), processor.get_imports_and_functions()).compile()
 
-    modules = sorted(p.name for p in (tmp_path / ".kale").glob("kale_notebook_*.py"))
-    assert len(modules) == 2
+    assert len(names) == 2
+    assert len(list((tmp_path / ".kale").glob("*.kale.py"))) == 2
+    assert len(list((tmp_path / ".kale").glob("kale_notebook_*.py"))) == 2
 
 
 def test_ui_compile_path_composes(tmp_path, monkeypatch):

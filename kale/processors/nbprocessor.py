@@ -127,15 +127,8 @@ class NotebookConfig(PipelineConfig):
     def _preprocess(self, kwargs):
         kwargs[STEPS_DEFAULTS] = self._parse_steps_defaults(kwargs.get(STEPS_DEFAULTS))
         if not kwargs.get("pipeline_name") and kwargs.get(NOTEBOOK_PATH):
-            # named after the notebook so notebooks in one directory don't collide
-            notebook = os.path.basename(kwargs[NOTEBOOK_PATH])
-            kwargs["pipeline_name"] = utils.notebook_k8s_name(notebook)
-            if not utils.sanitize_k8s_name(os.path.splitext(notebook)[0]):
-                log.warning(
-                    "No usable pipeline name in '%s', using '%s'. Set pipeline_name to override.",
-                    notebook,
-                    kwargs["pipeline_name"],
-                )
+            kwargs["pipeline_name"] = utils.notebook_k8s_name(kwargs[NOTEBOOK_PATH])
+            log.info("No pipeline_name set, using '%s'.", kwargs["pipeline_name"])
 
     def _parse_steps_defaults(self, steps_defaults):
         """Parse common step configuration defined in the metadata."""
